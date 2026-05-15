@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 import type { DesignPlan, FloorPlanAnalysis, PreferenceProfile } from "@/lib/domain/schemas";
 
 type PrismaLike = Pick<
@@ -52,14 +52,14 @@ export function createProjectRepository(prisma: PrismaLike) {
       projectId: string,
       role: "agent" | "user" | "system",
       content: string,
-      metadata?: unknown
+      metadata?: Prisma.InputJsonValue
     ) {
       return prisma.agentConversation.create({
         data: {
           projectId,
           role,
           content,
-          metadataJson: metadata === undefined ? undefined : metadata
+          metadataJson: metadata
         }
       });
     },
