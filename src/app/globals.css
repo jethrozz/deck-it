@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --background: #f7f5ef;
+  --foreground: #20201d;
+  --muted: #6d6a61;
+  --panel: #ffffff;
+  --line: #dad5c9;
+  --accent: #2d6a62;
+  --accent-strong: #1d4d47;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
