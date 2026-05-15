@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id            String              @id @default(cuid())
+  name          String
+  status        ProjectStatus       @default(CREATED)
+  floorPlanUrl  String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  analysis      FloorPlanAnalysis?
+  preference    PreferenceProfile?
+  conversations AgentConversation[]
+  designPlan    DesignPlan?
+  renderings    RenderingAsset[]
+  briefExports  BriefExport[]
+}
+
+model FloorPlanAnalysis {
+  id           String   @id @default(cuid())
+  projectId    String   @unique
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  analysisJson Json
+  confirmed    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model PreferenceProfile {
+  id          String   @id @default(cuid())
+  projectId   String   @unique
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  profileJson Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AgentConversation {
+  id           String   @id @default(cuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  role         String
+  content      String
+  metadataJson Json?
+  createdAt    DateTime @default(now())
+}
+
+model DesignPlan {
+  id        String   @id @default(cuid())
+  projectId String   @unique
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  planJson  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RenderingAsset {
+  id           String      @id @default(cuid())
+  projectId    String
+  project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  spaceType    String
+  prompt       String
+  imageUrl     String?
+  status       AssetStatus @default(PENDING)
+  errorMessage String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model BriefExport {
+  id           String      @id @default(cuid())
+  projectId    String
+  project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fileUrl      String?
+  status       AssetStatus @default(PENDING)
+  version      Int         @default(1)
+  errorMessage String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+enum ProjectStatus {
+  CREATED
+  FLOOR_PLAN_ANALYZED
+  PREFERENCES_COLLECTED
+  INTERVIEWING
+  PLAN_READY
+  RENDERINGS_READY
+  BRIEF_READY
+}
+
+enum AssetStatus {
+  PENDING
+  RUNNING
+  READY
+  FAILED
+}
