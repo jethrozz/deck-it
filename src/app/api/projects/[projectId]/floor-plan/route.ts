@@ -14,16 +14,21 @@ export async function POST(request: Request, context: { params: Promise<{ projec
   }
 
   const bytes = new Uint8Array(await file.arrayBuffer());
+  const mimeType = file.type || "image/png";
+  const imageDataUrl = `data:${mimeType};base64,${Buffer.from(bytes).toString("base64")}`;
   const stored = await createStorageProvider().saveProjectFile({
     projectId,
     fileName: file.name,
-    contentType: file.type || "application/octet-stream",
+    contentType: mimeType,
     bytes
   });
 
   const provider = createAiProvider();
   const repo = createProjectRepository(prisma);
-  const analysis = await provider.analyzeFloorPlan({ imageUrl: stored.url });
+  const analysis = await provider.analyzeFloorPlan({
+    imageUrl: stored.url,
+    imageDataUrl
+  });
 
   await repo.saveFloorPlanUrl(projectId, stored.url);
   await repo.saveFloorPlanAnalysis(projectId, analysis, false);

@@ -42,12 +42,19 @@ The default `AI_PROVIDER=mock` runs the full flow without external model credent
 
 Set `AI_PROVIDER=doubao` and configure:
 
-- `DOUBAO_API_KEY`
-- `DOUBAO_VISION_URL`
-- `DOUBAO_CHAT_URL`
-- `SEEDREAM_IMAGE_URL`
+- `DOUBAO_API_KEY` or `ARK_API_KEY`
+- `DOUBAO_BASE_URL` (default `https://ark.cn-beijing.volces.com/api/v3`)
+- `DOUBAO_CHAT_MODEL` (text agent model id)
+- `DOUBAO_VISION_MODEL` (vision-capable model id for floor plan analysis)
+- `SEEDREAM_MODEL` (image generation model id)
+- `SEEDREAM_SIZE` (optional, default `2048x2048`)
 
-The adapter expects JSON responses that match the schemas in `src/lib/domain/schemas.ts`.
+The adapter uses OpenAI-compatible Ark endpoints:
+
+- `POST /chat/completions` for analysis, interview, and plan generation.
+- `POST /images/generations` for Seedream rendering generation.
+
+Floor plan analysis sends image as Base64 data URL to avoid external URL access issues.
 
 ## Product Boundary
 

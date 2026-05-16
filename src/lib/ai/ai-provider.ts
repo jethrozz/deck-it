@@ -16,7 +16,7 @@ export type AgentTurnOutput =
   | { type: "ready"; reason: string };
 
 export interface AiProvider {
-  analyzeFloorPlan(input: { imageUrl: string }): Promise<FloorPlanAnalysis>;
+  analyzeFloorPlan(input: { imageUrl: string; imageDataUrl?: string }): Promise<FloorPlanAnalysis>;
   nextAgentTurn(input: AgentTurnInput): Promise<AgentTurnOutput>;
   generateDesignPlan(input: {
     analysis: FloorPlanAnalysis;
