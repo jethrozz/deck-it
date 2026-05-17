@@ -4,6 +4,7 @@ export const styleLabels: Record<Style, string> = {
   warm_wood: "原木风",
   vintage: "中古风",
   modern_minimal: "现代简约",
+  cream: "奶油风",
   wabi_sabi: "侘寂风"
 };
 
