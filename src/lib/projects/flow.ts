@@ -11,16 +11,19 @@ export type WizardStepKey =
 export type WizardStep = {
   key: WizardStepKey;
   label: string;
+  path: string;
 };
 
-export const wizardSteps: WizardStep[] = [
-  { key: "upload", label: "上传户型图" },
-  { key: "analysis", label: "户型分析" },
-  { key: "preferences", label: "风格预算" },
-  { key: "interview", label: "设计师咨询" },
-  { key: "generating", label: "生成中" },
-  { key: "complete", label: "方案完成" }
-];
+export const wizardSteps = [
+  { key: "upload", label: "上传户型图", path: "upload" },
+  { key: "analysis", label: "户型分析", path: "analysis" },
+  { key: "preferences", label: "风格预算", path: "preferences" },
+  { key: "interview", label: "设计师咨询", path: "interview" },
+  { key: "generating", label: "生成中", path: "generating" },
+  { key: "complete", label: "方案完成", path: "complete" }
+] as const satisfies readonly WizardStep[];
+
+const wizardStepByKey = new Map<WizardStepKey, WizardStep>(wizardSteps.map((step) => [step.key, step]));
 
 const statusToStep: Record<ProjectStatus, WizardStepKey> = {
   CREATED: "upload",
@@ -40,18 +43,24 @@ const statusToStep: Record<ProjectStatus, WizardStepKey> = {
   BRIEF_READY: "complete"
 };
 
-const stepToPath: Record<WizardStepKey, string> = {
-  upload: "upload",
-  analysis: "analysis",
-  preferences: "preferences",
-  interview: "interview",
-  generating: "generating",
-  complete: "complete"
-};
+function getWizardStepByKey(stepKey: WizardStepKey): WizardStep {
+  const step = wizardStepByKey.get(stepKey);
+
+  if (!step) {
+    throw new Error(`Unknown wizard step: ${stepKey}`);
+  }
+
+  return step;
+}
 
 export function getProjectStep(status: ProjectStatus): WizardStep {
   const key = statusToStep[status];
-  return wizardSteps.find((step) => step.key === key) ?? wizardSteps[0];
+
+  if (!key) {
+    throw new Error(`Unknown project status: ${status}`);
+  }
+
+  return getWizardStepByKey(key);
 }
 
 export function getProjectRoute(projectId: string, status: ProjectStatus) {
@@ -59,9 +68,15 @@ export function getProjectRoute(projectId: string, status: ProjectStatus) {
     return `/projects/${projectId}/analysis/loading`;
   }
 
-  return `/projects/${projectId}/${stepToPath[getProjectStep(status).key]}`;
+  return `/projects/${projectId}/${getProjectStep(status).path}`;
 }
 
 export function getStepIndex(stepKey: WizardStepKey) {
-  return wizardSteps.findIndex((step) => step.key === stepKey);
+  const stepIndex = wizardSteps.findIndex((step) => step.key === stepKey);
+
+  if (stepIndex < 0) {
+    throw new Error(`Unknown wizard step: ${stepKey}`);
+  }
+
+  return stepIndex;
 }

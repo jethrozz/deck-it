@@ -48,4 +48,13 @@ describe("project flow", () => {
     expect(getStepIndex("generating")).toBe(4);
     expect(getStepIndex("complete")).toBe(5);
   });
+
+  it("keeps step metadata consistent and fails explicitly for impossible mappings", () => {
+    expect(new Set(wizardSteps.map((step) => step.key)).size).toBe(wizardSteps.length);
+    expect(wizardSteps.every((step) => step.label.length > 0)).toBe(true);
+    expect(wizardSteps.every((step) => getStepIndex(step.key) >= 0)).toBe(true);
+
+    expect(() => getProjectStep("NOT_A_STATUS" as never)).toThrow(/Unknown project status/);
+    expect(() => getStepIndex("NOT_A_STEP" as never)).toThrow(/Unknown wizard step/);
+  });
 });
