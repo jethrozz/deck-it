@@ -4,7 +4,7 @@ export const styleSchema = z.enum([
   "warm_wood",
   "vintage",
   "modern_minimal",
-  "cream",
+  "bright",
   "wabi_sabi"
 ]);
 
@@ -60,6 +60,43 @@ export const agentQuestionSchema = z.object({
   reason: z.string().min(1)
 });
 
+export const interviewProgressSchema = z.object({
+  current: z.number().int().min(0).max(12),
+  max: z.literal(12)
+});
+
+export const agentInterviewResponseSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("designer_prompt"),
+    message: z.string().min(1),
+    options: z.array(z.string().min(1)).max(4).optional(),
+    recommendation: z.string().min(1).optional(),
+    progress: interviewProgressSchema
+  }),
+  z.object({
+    type: z.literal("suggestion"),
+    message: z.string().min(1),
+    options: z.array(z.string().min(1)).min(1).max(4),
+    progress: interviewProgressSchema
+  }),
+  z.object({
+    type: z.literal("complete"),
+    summary: z.string().min(1),
+    nextPath: z.string().min(1)
+  })
+]);
+
+export const generationTaskSchema = z.object({
+  key: z.enum(["requirement_profile", "plan", "spaces", "renderings", "brief"]),
+  label: z.string().min(1),
+  status: z.enum(["waiting", "running", "done", "failed"]),
+  error: z.string().optional()
+});
+
+export const generationStatusSchema = z.object({
+  tasks: z.array(generationTaskSchema).length(5)
+});
+
 export const keySpacePlanSchema = z.object({
   spaceType: roomTypeSchema,
   title: z.string().min(1),
@@ -87,4 +124,6 @@ export type RoomType = z.infer<typeof roomTypeSchema>;
 export type FloorPlanAnalysis = z.infer<typeof floorPlanAnalysisSchema>;
 export type PreferenceProfile = z.infer<typeof preferenceProfileSchema>;
 export type AgentQuestion = z.infer<typeof agentQuestionSchema>;
+export type AgentInterviewResponse = z.infer<typeof agentInterviewResponseSchema>;
 export type DesignPlan = z.infer<typeof designPlanSchema>;
+export type GenerationStatus = z.infer<typeof generationStatusSchema>;

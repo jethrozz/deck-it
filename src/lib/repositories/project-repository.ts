@@ -1,8 +1,9 @@
-import type { Prisma, PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient, ProjectStatus } from "@prisma/client";
 import type { DesignPlan, FloorPlanAnalysis, PreferenceProfile } from "@/lib/domain/schemas";
 
 type PrismaLike = Pick<
   PrismaClient,
+  | "$transaction"
   | "project"
   | "floorPlanAnalysis"
   | "preferenceProfile"
@@ -46,6 +47,31 @@ export function createProjectRepository(prisma: PrismaLike) {
         update: { profileJson: profile },
         create: { projectId, profileJson: profile }
       });
+    },
+
+    updateProjectStatus(projectId: string, status: ProjectStatus) {
+      return prisma.project.update({
+        where: { id: projectId },
+        data: { status }
+      });
+    },
+
+    confirmFloorPlanAnalysis(projectId: string, userCorrections: string[]) {
+      return prisma.$transaction([
+        prisma.floorPlanAnalysis.update({
+          where: { projectId },
+          data: {
+            confirmed: true,
+            analysisJson: {
+              userCorrections
+            }
+          }
+        }),
+        prisma.project.update({
+          where: { id: projectId },
+          data: { status: "ANALYSIS_CONFIRMED" }
+        })
+      ]);
     },
 
     addConversationMessage(

@@ -4,7 +4,7 @@ export const styleLabels = {
   warm_wood: "原木风",
   vintage: "中古风",
   modern_minimal: "现代简约",
-  cream: "奶油风",
+  bright: "明亮通透",
   wabi_sabi: "侘寂风"
 } as const satisfies Record<Style, string>;
 

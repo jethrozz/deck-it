@@ -41,4 +41,50 @@ describe("project repository", () => {
       data: { status: "FLOOR_PLAN_ANALYZED" }
     });
   });
+
+  it("confirms floor plan analysis and stores user corrections", async () => {
+    const prisma = {
+      $transaction: vi.fn(async (operations: unknown[]) => operations),
+      floorPlanAnalysis: {
+        update: vi.fn().mockResolvedValue({ id: "a1", confirmed: true })
+      },
+      project: {
+        update: vi.fn().mockResolvedValue({ id: "p1", status: "ANALYSIS_CONFIRMED" })
+      }
+    };
+
+    const repo = createProjectRepository(prisma as never);
+    await repo.confirmFloorPlanAnalysis("p1", ["次卧需要作为书房"]);
+
+    expect(prisma.floorPlanAnalysis.update).toHaveBeenCalledWith({
+      where: { projectId: "p1" },
+      data: {
+        confirmed: true,
+        analysisJson: {
+          userCorrections: ["次卧需要作为书房"]
+        }
+      }
+    });
+    expect(prisma.project.update).toHaveBeenCalledWith({
+      where: { id: "p1" },
+      data: { status: "ANALYSIS_CONFIRMED" }
+    });
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it("updates project status directly", async () => {
+    const prisma = {
+      project: {
+        update: vi.fn().mockResolvedValue({ id: "p1", status: "INTERVIEWING" })
+      }
+    };
+
+    const repo = createProjectRepository(prisma as never);
+    await repo.updateProjectStatus("p1", "INTERVIEWING");
+
+    expect(prisma.project.update).toHaveBeenCalledWith({
+      where: { id: "p1" },
+      data: { status: "INTERVIEWING" }
+    });
+  });
 });
