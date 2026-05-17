@@ -1,12 +1,9 @@
 import type { BudgetTier, RoomType, Style } from "@/lib/domain/schemas";
 
-type StyleLabelKey = Style | "bright";
-
-export const styleLabels: Record<StyleLabelKey, string> = {
+export const styleLabels: Record<Style, string> = {
   warm_wood: "原木风",
   vintage: "中古风",
   modern_minimal: "现代简约",
-  bright: "明亮通透",
   wabi_sabi: "侘寂风"
 };
 
