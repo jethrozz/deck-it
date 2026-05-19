@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "装修设计 Agent",
-  description: "上传户型图，生成装修设计 brief"
+  title: "装它 - deck it",
+  description: "装它 - deck it，让装修从想法到方案更简单"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { createProjectRepository } from "@/lib/repositories/project-repository";
 
 const requestBodySchema = z.object({
+  action: z.enum(["start", "answer"]),
   answer: z.string().optional().default("")
 });
 
@@ -16,7 +17,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
   const userAnswer = body.answer.trim();
   const repo = createProjectRepository(prisma);
 
-  if (userAnswer.length > 0) {
+  if (body.action === "answer" && userAnswer.length > 0) {
     await repo.addConversationMessage(projectId, "user", userAnswer);
   }
 
@@ -42,10 +43,13 @@ export async function POST(request: Request, context: { params: Promise<{ projec
       .map((message) => ({ role: message.role as "agent" | "user", content: message.content }))
   });
 
-  if (result.type === "question") {
-    await repo.addConversationMessage(projectId, "agent", result.question.question, result.question);
-    await prisma.project.update({ where: { id: projectId }, data: { status: "INTERVIEWING" } });
+  if (result.type === "complete") {
+    await repo.addConversationMessage(projectId, "agent", result.summary, result);
+    await repo.updateProjectStatus(projectId, "INTERVIEW_COMPLETE");
+    return NextResponse.json(result);
   }
 
+  await repo.addConversationMessage(projectId, "agent", result.message, result);
+  await repo.updateProjectStatus(projectId, "INTERVIEWING");
   return NextResponse.json(result);
 }

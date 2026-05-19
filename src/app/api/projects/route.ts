@@ -9,5 +9,5 @@ export async function POST(request: Request) {
 
   const repo = createProjectRepository(prisma);
   const project = await repo.createProject(name || "我的装修方案");
-  redirect(`/projects/${project.id}`);
+  redirect(`/projects/${project.id}/upload`);
 }

@@ -10,7 +10,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
   const repo = createProjectRepository(prisma);
 
   await repo.savePreferenceProfile(projectId, profile);
-  await prisma.project.update({ where: { id: projectId }, data: { status: "PREFERENCES_COLLECTED" } });
+  await repo.updateProjectStatus(projectId, "INTERVIEWING");
 
-  return NextResponse.json({ profile });
+  return NextResponse.json({ profile, nextPath: `/projects/${projectId}/interview` });
 }

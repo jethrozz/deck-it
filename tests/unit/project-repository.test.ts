@@ -46,6 +46,16 @@ describe("project repository", () => {
     const prisma = {
       $transaction: vi.fn(async (operations: unknown[]) => operations),
       floorPlanAnalysis: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: "a1",
+          analysisJson: {
+            rooms: [{ name: "次卧", type: "study", confidence: 0.72 }],
+            relationships: ["客餐厅连接阳台"],
+            issues: [],
+            uncertainItems: [],
+            userCorrections: []
+          }
+        }),
         update: vi.fn().mockResolvedValue({ id: "a1", confirmed: true })
       },
       project: {
@@ -56,11 +66,18 @@ describe("project repository", () => {
     const repo = createProjectRepository(prisma as never);
     await repo.confirmFloorPlanAnalysis("p1", ["次卧需要作为书房"]);
 
+    expect(prisma.floorPlanAnalysis.findUnique).toHaveBeenCalledWith({
+      where: { projectId: "p1" }
+    });
     expect(prisma.floorPlanAnalysis.update).toHaveBeenCalledWith({
       where: { projectId: "p1" },
       data: {
         confirmed: true,
         analysisJson: {
+          rooms: [{ name: "次卧", type: "study", confidence: 0.72 }],
+          relationships: ["客餐厅连接阳台"],
+          issues: [],
+          uncertainItems: [],
           userCorrections: ["次卧需要作为书房"]
         }
       }

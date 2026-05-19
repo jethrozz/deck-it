@@ -1,4 +1,4 @@
-import type { AgentQuestion, DesignPlan, FloorPlanAnalysis, PreferenceProfile } from "@/lib/domain/schemas";
+import type { AgentInterviewResponse, DesignPlan, FloorPlanAnalysis, PreferenceProfile } from "@/lib/domain/schemas";
 
 export type AgentConversationMessage = {
   role: "agent" | "user";
@@ -11,9 +11,7 @@ export type AgentTurnInput = {
   conversation: AgentConversationMessage[];
 };
 
-export type AgentTurnOutput =
-  | { type: "question"; question: AgentQuestion }
-  | { type: "ready"; reason: string };
+export type AgentTurnOutput = AgentInterviewResponse;
 
 export interface AiProvider {
   analyzeFloorPlan(input: { imageUrl: string; imageDataUrl?: string }): Promise<FloorPlanAnalysis>;

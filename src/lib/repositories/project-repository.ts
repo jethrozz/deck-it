@@ -56,15 +56,29 @@ export function createProjectRepository(prisma: PrismaLike) {
       });
     },
 
-    confirmFloorPlanAnalysis(projectId: string, userCorrections: string[]) {
+    async confirmFloorPlanAnalysis(projectId: string, userCorrections: string[]) {
+      const existing = await prisma.floorPlanAnalysis.findUnique({
+        where: { projectId }
+      });
+
+      if (!existing) {
+        throw new Error("Floor plan analysis not found.");
+      }
+
+      const analysisJson =
+        existing.analysisJson && typeof existing.analysisJson === "object"
+          ? {
+              ...(existing.analysisJson as Record<string, unknown>),
+              userCorrections
+            }
+          : { userCorrections };
+
       return prisma.$transaction([
         prisma.floorPlanAnalysis.update({
           where: { projectId },
           data: {
             confirmed: true,
-            analysisJson: {
-              userCorrections
-            }
+            analysisJson
           }
         }),
         prisma.project.update({
@@ -96,6 +110,18 @@ export function createProjectRepository(prisma: PrismaLike) {
         update: { planJson: plan },
         create: { projectId, planJson: plan }
       });
+    },
+
+    async resetGeneratedOutputs(projectId: string) {
+      await prisma.$transaction([
+        prisma.renderingAsset.deleteMany({ where: { projectId } }),
+        prisma.briefExport.deleteMany({ where: { projectId } }),
+        prisma.designPlan.deleteMany({ where: { projectId } }),
+        prisma.project.update({
+          where: { id: projectId },
+          data: { status: "INTERVIEW_COMPLETE" }
+        })
+      ]);
     }
   };
 }

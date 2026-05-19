@@ -25,6 +25,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
 
   const provider = createAiProvider();
   const repo = createProjectRepository(prisma);
+  await repo.updateProjectStatus(projectId, "FLOOR_PLAN_ANALYZING");
   const analysis = await provider.analyzeFloorPlan({
     imageUrl: stored.url,
     imageDataUrl
@@ -33,5 +34,9 @@ export async function POST(request: Request, context: { params: Promise<{ projec
   await repo.saveFloorPlanUrl(projectId, stored.url);
   await repo.saveFloorPlanAnalysis(projectId, analysis, false);
 
-  return NextResponse.json({ imageUrl: stored.url, analysis });
+  return NextResponse.json({
+    imageUrl: stored.url,
+    analysis,
+    nextPath: `/projects/${projectId}/analysis`
+  });
 }

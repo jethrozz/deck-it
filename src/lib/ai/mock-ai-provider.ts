@@ -23,17 +23,26 @@ export class MockAiProvider implements AiProvider {
 
   async nextAgentTurn(input: AgentTurnInput): Promise<AgentTurnOutput> {
     if (input.conversation.length >= 4) {
-      return { type: "ready", reason: "已收集风格、采光、收纳和第三空间偏好" };
+      return {
+        type: "complete",
+        summary: "已收集风格、采光、收纳和第三空间偏好，接下来开始生成方案。",
+        nextPath: "/generating"
+      };
     }
 
     return {
-      type: "question",
-      question: {
-        id: `q-${input.conversation.length + 1}`,
-        question: "客餐厅采光集中在阳台一侧，你更希望保留开放感还是增加收纳？",
-        recommendation: "建议优先保留开放感，并把收纳集中到玄关和餐边柜。",
-        options: ["采纳开放感优先", "更需要收纳", "我想补充说明"],
-        reason: "这个选择会直接影响柜体体量、材质深浅和客餐厅视觉开阔度。"
+      type: "designer_prompt",
+      message:
+        input.conversation.length === 0
+          ? "我看这个户型的客餐厅连接阳台，可以优先考虑显大和采光。你们最在意哪个生活场景？"
+          : "明白。我会把这个需求纳入方案里。还有没有需要兼顾的收纳、办公或儿童活动需求？",
+      options:
+        input.conversation.length === 0
+          ? ["孩子活动区", "朋友聚餐", "投影观影"]
+          : ["需要收纳", "需要办公", "没有了"],
+      progress: {
+        current: Math.min(Math.floor(input.conversation.length / 2) + 1, 12),
+        max: 12
       }
     };
   }

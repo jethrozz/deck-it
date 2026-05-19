@@ -8,15 +8,30 @@ export type AgentWorkflowInput = {
   conversation: Array<{ role: "agent" | "user"; content: string }>;
 };
 
+const MAX_DESIGNER_TURNS = 12;
+const TARGET_DESIGNER_TURNS = 5;
+const TARGET_USER_ANSWERS = 5;
+
 function countAgentQuestions(conversation: AgentWorkflowInput["conversation"]): number {
   return conversation.filter((message) => message.role === "agent").length;
 }
 
+function countUserAnswers(conversation: AgentWorkflowInput["conversation"]): number {
+  return conversation.filter((message) => message.role === "user").length;
+}
+
 export async function runNextAgentStep(input: AgentWorkflowInput): Promise<AgentTurnOutput> {
-  if (countAgentQuestions(input.conversation) >= 12) {
+  const agentQuestions = countAgentQuestions(input.conversation);
+  const userAnswers = countUserAnswers(input.conversation);
+
+  if (
+    agentQuestions >= MAX_DESIGNER_TURNS ||
+    (agentQuestions >= TARGET_DESIGNER_TURNS && userAnswers >= TARGET_USER_ANSWERS)
+  ) {
     return {
-      type: "ready",
-      reason: "已达到最多 12 个追问，进入方案生成。"
+      type: "complete",
+      summary: "已收集足够信息，将按当前需求生成装修设计方案。",
+      nextPath: "/generating"
     };
   }
 
