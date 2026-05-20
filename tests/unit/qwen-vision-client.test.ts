@@ -113,4 +113,40 @@ describe("QwenVisionClient", () => {
       userCorrections: ["如次卧实际作为书房，请在下一轮更正"]
     });
   });
+
+  it("maps 次卧 to a supported bedroom type instead of other", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  rooms: [{ name: "次卧", type: "次卧", confidence: 0.83 }],
+                  relationships: [],
+                  issues: [],
+                  uncertainItems: [],
+                  userCorrections: []
+                })
+              }
+            }
+          ]
+        })
+      })
+    );
+
+    const client = new QwenVisionClient({
+      apiKey: "qwen-key",
+      baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      model: "qwen3-vl-plus"
+    });
+
+    const result = await client.analyzeFloorPlan({
+      imageUrl: "/uploads/floor-plan.png"
+    });
+
+    expect(result.rooms).toEqual([{ name: "次卧", type: "child_room", confidence: 0.83 }]);
+  });
 });

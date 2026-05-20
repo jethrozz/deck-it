@@ -125,4 +125,66 @@ describe("DoubaoProvider compatibility", () => {
     });
     expect(body.model).toBe("deepseek-v4-pro");
   });
+
+  it("does not partially mix TEXT_* overrides into the legacy text path", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                type: "designer_prompt",
+                message: "更想先聊客餐厅还是卧室？",
+                options: ["客餐厅", "卧室"],
+                progress: { current: 2, max: 12 }
+              })
+            }
+          }
+        ]
+      })
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubEnv("TEXT_BASE_URL", "https://api.deepseek.com");
+    vi.stubEnv("TEXT_MODEL", "deepseek-v4-pro");
+
+    const provider = new DoubaoProvider({
+      apiKey: "legacy-key",
+      baseUrl: "https://legacy.example.com/api/v3",
+      chatModel: "doubao-chat",
+      visionModel: "doubao-vision",
+      imageModel: "seedream-legacy",
+      imageSize: "1792x1024"
+    });
+
+    await provider.nextAgentTurn({
+      analysis: {
+        rooms: [{ name: "客餐厅", type: "living_dining", confidence: 0.9 }],
+        relationships: ["客餐厅连接阳台"],
+        issues: [{ type: "lighting", description: "采光集中在阳台一侧", confidence: 0.8 }],
+        uncertainItems: [],
+        userCorrections: []
+      },
+      profile: {
+        style: "warm_wood",
+        budgetTier: "quality",
+        naturalLanguagePreference: "显大、好打理",
+        lifestyleNotes: [],
+        hardConstraints: [],
+        adoptedSuggestions: [],
+        rejectedSuggestions: []
+      },
+      conversation: [{ role: "agent", content: "先确认家庭成员结构。" }]
+    });
+
+    const [requestUrl, requestInit] = fetchMock.mock.calls[0] ?? [];
+    const body = JSON.parse(String(requestInit?.body));
+
+    expect(requestUrl).toBe("https://legacy.example.com/api/v3/chat/completions");
+    expect(requestInit?.headers).toMatchObject({
+      Authorization: "Bearer legacy-key"
+    });
+    expect(body.model).toBe("doubao-chat");
+  });
 });

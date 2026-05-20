@@ -25,6 +25,7 @@ const roomTypeMap = new Map<string, string>([
   ["餐厅", "living_dining"],
   ["卧室", "master_bedroom"],
   ["主卧", "master_bedroom"],
+  ["次卧", "child_room"],
   ["master_bedroom", "master_bedroom"],
   ["kitchen", "kitchen"],
   ["厨房", "kitchen"],

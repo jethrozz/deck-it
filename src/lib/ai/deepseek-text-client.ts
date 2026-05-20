@@ -22,6 +22,7 @@ const roomTypeMap = new Map<string, string>([
   ["餐厅", "living_dining"],
   ["卧室", "master_bedroom"],
   ["主卧", "master_bedroom"],
+  ["次卧", "child_room"],
   ["master_bedroom", "master_bedroom"],
   ["kitchen", "kitchen"],
   ["厨房", "kitchen"],
@@ -235,10 +236,17 @@ function buildDeterministicFallbackPlan(input: {
   };
   const styleSummary = styleSummaryMap[input.profile.style] ?? "现代原木，强调通透、耐看和舒适落地。";
   const spaces: Array<ReturnType<typeof buildDeterministicSpace>> = [];
+  const addSpace = (space: ReturnType<typeof buildDeterministicSpace>) => {
+    if (spaces.some((existing) => existing.title === space.title)) {
+      return;
+    }
+
+    spaces.push(space);
+  };
 
   const livingDining = pickFirstRoom(input.analysis, ["living_dining"]);
   if (livingDining) {
-    spaces.push(
+    addSpace(
       buildDeterministicSpace({
         title: "客餐厅",
         type: "living_dining",
@@ -257,7 +265,7 @@ function buildDeterministicFallbackPlan(input: {
   }
 
   if (hasKeyword(combinedText, ["书房", "客房", "多功能", "办公", "临时住", "墨菲"])) {
-    spaces.push(
+    addSpace(
       buildDeterministicSpace({
         title: "多功能房",
         type: "other",
@@ -275,7 +283,7 @@ function buildDeterministicFallbackPlan(input: {
   }
 
   if (hasKeyword(combinedText, ["孩子", "儿童", "学习", "玩耍", "绘本"])) {
-    spaces.push(
+    addSpace(
       buildDeterministicSpace({
         title: "儿童房",
         type: "child_room",
@@ -293,7 +301,7 @@ function buildDeterministicFallbackPlan(input: {
   }
 
   if (hasKeyword(combinedText, ["阳台", "洗烘", "家政", "公卫", "卫生间", "干湿分离"])) {
-    spaces.push(
+    addSpace(
       buildDeterministicSpace({
         title: hasKeyword(combinedText, ["公卫", "卫生间"]) ? "阳台家政区+公卫" : "阳台家政区",
         type: "other",
@@ -326,7 +334,7 @@ function buildDeterministicFallbackPlan(input: {
     }
 
     if (fallbackRoom.type === "master_bedroom") {
-      spaces.push(
+      addSpace(
         buildDeterministicSpace({
           title: "主卧",
           type: "master_bedroom",
@@ -341,7 +349,7 @@ function buildDeterministicFallbackPlan(input: {
         })
       );
     } else if (fallbackRoom.type === "kitchen") {
-      spaces.push(
+      addSpace(
         buildDeterministicSpace({
           title: "厨房",
           type: "kitchen",
@@ -356,6 +364,57 @@ function buildDeterministicFallbackPlan(input: {
         })
       );
     }
+  }
+
+  const safeFallbackSpaces = [
+    buildDeterministicSpace({
+      title: "客餐厅",
+      type: "living_dining",
+      designGoal: "提升公共区通透感、收纳效率和家庭互动体验",
+      explanation:
+        "即使当前户型信息较少，客餐厅通常仍是最值得优先展示的公共空间，应先把采光、会客与家庭互动的基本框架建立起来。",
+      layoutSuggestion:
+        "围绕主要采光面组织沙发、餐桌与收纳柜，减少零碎家具打断动线，并把高频杂物尽量纳入一体化收纳。",
+      paletteAndMaterials: ["浅木饰面", "暖白墙面", "低反光耐磨地面"],
+      furnitureAndSoftDecor: ["低靠背沙发", "圆角餐桌", "餐边柜", "层次照明"],
+      practicalNotes: ["优先确认公共区通行宽度", "尽量保留采光面完整性", "补齐高频杂物收纳"],
+      budgetTradeOffs: "预算优先投入在一体化柜体、灯光层次和高频接触面的耐用材质上。",
+      styleSummary
+    }),
+    buildDeterministicSpace({
+      title: "主卧",
+      type: "master_bedroom",
+      designGoal: "营造安静、好打理且有充足收纳的休息空间",
+      explanation:
+        "当户型信息较稀疏时，主卧依然是最常见且最具代表性的私密空间，适合用来承接休息舒适度与基础收纳的核心诉求。",
+      layoutSuggestion: "床位沿安静侧布置，衣柜尽量整面化，保证床两侧顺手通行，并用基础照明维持安静氛围。",
+      paletteAndMaterials: ["米灰软装", "浅木饰面", "柔和织物"],
+      furnitureAndSoftDecor: ["软包床", "衣柜", "床头灯", "遮光窗帘"],
+      practicalNotes: ["保证床侧通行", "控制灯光眩光", "优先封闭收纳"],
+      budgetTradeOffs: "预算优先放在环保板材、床垫和衣柜五金上。",
+      styleSummary
+    }),
+    buildDeterministicSpace({
+      title: "厨房",
+      type: "kitchen",
+      designGoal: "提升烹饪动线、台面效率和清洁便利性",
+      explanation:
+        "厨房是高频功能空间，即使缺少更细的结构信息，也适合先明确台面效率、封闭收纳和清洁便利这三个基本方向。",
+      layoutSuggestion: "优先保证洗切炒顺序，常用小电器集中到固定台面区域，并尽量增加封闭收纳减少台面堆放。",
+      paletteAndMaterials: ["浅色柜门", "石英台面", "防污墙面"],
+      furnitureAndSoftDecor: ["地柜", "吊柜", "抽屉拉篮", "嵌入式家电位"],
+      practicalNotes: ["增强备餐台面", "减少杂物外露", "优先易清洁材质"],
+      budgetTradeOffs: "预算优先投入在台面、铰链和抽屉五金等高频部位。",
+      styleSummary
+    })
+  ];
+
+  for (const space of safeFallbackSpaces) {
+    if (spaces.length >= 2) {
+      break;
+    }
+
+    addSpace(space);
   }
 
   return {

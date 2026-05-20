@@ -338,4 +338,100 @@ describe("DeepSeekTextClient", () => {
     expect(plan.keySpaces[1]?.renderingPrompt).toContain("墨菲床或沙发床");
     expect(plan.keySpaces[2]?.renderingPrompt).toContain("干湿分离");
   });
+
+  it("builds a schema-valid deterministic fallback even for sparse floor plans", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  overallStrategy: "第一次返回方案。",
+                  styleSummary: "温暖原木。",
+                  budgetAssumptions: "控制在品质型预算。",
+                  keySpaces: [{ title: "", type: "other" }, { title: "", type: "other" }],
+                  disclaimer: "方案用于前期沟通参考。"
+                })
+              }
+            }
+          ]
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  overallStrategy: "第二次还是很泛。",
+                  styleSummary: "温暖原木。",
+                  budgetAssumptions: "控制在品质型预算。",
+                  keySpaces: [
+                    { title: "重点空间", type: "other", explanation: "提升使用体验为核心。" },
+                    { title: "重点空间", type: "other", explanation: "提升使用体验为核心。" }
+                  ],
+                  disclaimer: "方案用于前期沟通参考。"
+                })
+              }
+            }
+          ]
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  overallStrategy: "第三次依然不具体。",
+                  styleSummary: "温暖原木。",
+                  budgetAssumptions: "控制在品质型预算。",
+                  keySpaces: [
+                    {
+                      title: "重点空间",
+                      type: "other",
+                      designGoal: "重点空间的功能优化与风格统一",
+                      explanation: "重点空间以提升使用体验为核心。",
+                      layoutSuggestion: "重点空间优先保证通行、采光和主要功能布局。"
+                    }
+                  ],
+                  disclaimer: "方案用于前期沟通参考。"
+                })
+              }
+            }
+          ]
+        })
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new DeepSeekTextClient({
+      apiKey: "deepseek-key",
+      baseUrl: "https://api.deepseek.com",
+      model: "deepseek-v4-pro"
+    });
+
+    const plan = await client.generateDesignPlan({
+      analysis: {
+        rooms: [{ name: "客餐厅", type: "living_dining", confidence: 0.92 }],
+        relationships: [],
+        issues: [],
+        uncertainItems: [],
+        userCorrections: []
+      },
+      profile,
+      conversationSummary: "user: 希望整体显大、好打理。"
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(plan.keySpaces).toHaveLength(2);
+    expect(plan.keySpaces[0]?.title).toBe("客餐厅");
+    expect(plan.keySpaces[1]?.title).not.toBe("重点空间");
+    expect(plan.keySpaces[1]?.renderingPrompt).toContain("室内设计效果图");
+  });
 });

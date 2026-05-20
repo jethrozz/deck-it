@@ -31,6 +31,7 @@ const roomTypeMap = new Map<string, string>([
   ["餐厅", "living_dining"],
   ["卧室", "master_bedroom"],
   ["主卧", "master_bedroom"],
+  ["次卧", "child_room"],
   ["master_bedroom", "master_bedroom"],
   ["kitchen", "kitchen"],
   ["厨房", "kitchen"],
@@ -165,10 +166,15 @@ export class DoubaoProvider implements AiProvider {
   constructor(private readonly config: DoubaoConfig) {}
 
   private createTextClient() {
+    const textApiKey = getEnv("TEXT_API_KEY");
+    const textBaseUrl = getEnv("TEXT_BASE_URL");
+    const textModel = getEnv("TEXT_MODEL");
+    const hasCompleteTextOverride = Boolean(textApiKey && textBaseUrl && textModel);
+
     return new DeepSeekTextClient({
-      apiKey: getEnv("TEXT_API_KEY") ?? this.config.apiKey,
-      baseUrl: getEnv("TEXT_BASE_URL") ?? this.config.baseUrl,
-      model: getEnv("TEXT_MODEL") ?? this.config.chatModel
+      apiKey: hasCompleteTextOverride ? textApiKey! : this.config.apiKey,
+      baseUrl: hasCompleteTextOverride ? textBaseUrl! : this.config.baseUrl,
+      model: hasCompleteTextOverride ? textModel! : this.config.chatModel
     });
   }
 
