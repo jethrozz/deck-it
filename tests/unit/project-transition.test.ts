@@ -213,6 +213,37 @@ describe("project transition helpers", () => {
     expect(getTransitionNextPath(transition!)).toBe("/projects/p13/preferences?source=server");
   });
 
+  it("normalizes project-local relative nextPath on confirm transitions", async () => {
+    const storage = new MemoryStorage();
+    const transition = buildStageTransition({
+      projectId: "p14",
+      from: "interview",
+      to: "generating",
+      nextPath: "/generating"
+    });
+    expect(transition).not.toBeNull();
+    if (!transition) {
+      throw new Error("Expected transition to be built for interview -> generating");
+    }
+
+    persistStageTransition(transition, storage);
+    const visited: string[] = [];
+
+    render(
+      React.createElement(ProjectTransitionScreen, {
+        projectId: "p14",
+        storage,
+        navigate: (path) => visited.push(path)
+      })
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: transition.cta ?? "继续" }));
+
+    await waitFor(() => {
+      expect(visited).toEqual(["/projects/p14/generating"]);
+    });
+  });
+
   it("builds transition next path and fallback path", () => {
     const transition = buildStageTransition({
       projectId: "p7",

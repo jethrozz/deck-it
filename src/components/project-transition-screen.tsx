@@ -14,6 +14,18 @@ import {
 const AUTO_FORWARD_DELAY_MS = 1000;
 const FALLBACK_DELAY_MS = 1200;
 
+function normalizeNextPath(projectId: string, nextPath: string) {
+  if (nextPath.startsWith(`/projects/${projectId}/`)) {
+    return nextPath;
+  }
+
+  if (nextPath.startsWith("/")) {
+    return `/projects/${projectId}${nextPath}`;
+  }
+
+  return `/projects/${projectId}/${nextPath}`;
+}
+
 type TransitionState =
   | { type: "loading" }
   | {
@@ -52,7 +64,7 @@ export function ProjectTransitionScreen({
       return () => window.clearTimeout(timer);
     }
 
-    const nextPath = getTransitionNextPath(transition);
+    const nextPath = normalizeNextPath(projectId, getTransitionNextPath(transition));
     if (transition.mode === "auto") {
       setState({
         type: "ready",

@@ -39,6 +39,8 @@ test("homeowner can finish the guided renovation flow", async ({ page }) => {
   await expect(page.getByRole("button", { name: /保存并继续/ })).toBeEnabled();
   await page.getByRole("button", { name: /保存并继续/ }).click();
 
+  await expect(page).toHaveURL(/\/projects\/.+\/transition$/);
+  await expect(page.getByText(/正在进入下一步|正在准备下一步/)).toBeVisible();
   await expect(page).toHaveURL(/\/projects\/.+\/interview$/);
   await expect(page.getByText("AI 设计师")).toBeVisible();
   await expect(page.getByText(/我看这个户型的客餐厅连接阳台/)).toBeVisible();
@@ -53,6 +55,11 @@ test("homeowner can finish the guided renovation flow", async ({ page }) => {
     .getByPlaceholder("输入你的想法，比如‘次卧平时不住人，希望能兼顾书房和收纳’")
     .fill("还想增加玄关收纳，儿童活动最好在客厅。");
   await page.getByRole("button", { name: /发送回答/ }).click();
+
+  await expect(page).toHaveURL(/\/projects\/.+\/transition$/);
+  await expect(page.getByText("确认开始生成方案？")).toBeVisible();
+  await expect(page.getByRole("button", { name: /开始生成(方案)?/ })).toBeVisible();
+  await page.getByRole("button", { name: /开始生成(方案)?/ }).click();
 
   await expect(page).toHaveURL(/\/projects\/.+\/generating$/);
   await expect(page.getByText("生成预览")).toBeVisible();
