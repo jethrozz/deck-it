@@ -56,8 +56,52 @@ function getStageRoute(projectId: string, stepKey: WizardStepKey): string {
   return `/projects/${projectId}/${step?.path ?? stepKey}`;
 }
 
+function isWizardStepKey(value: unknown): value is WizardStepKey {
+  return typeof value === "string" && wizardSteps.some((step) => step.key === value);
+}
+
+function isTransitionMode(value: unknown): value is StageTransitionConfig["mode"] {
+  return value === "auto" || value === "confirm";
+}
+
+function toValidTransition(value: unknown, projectId: string): ProjectStageTransition | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const record = value as Partial<ProjectStageTransition>;
+
+  if (
+    record.projectId !== projectId ||
+    !isWizardStepKey(record.from) ||
+    !isWizardStepKey(record.to) ||
+    !isTransitionMode(record.mode)
+  ) {
+    return null;
+  }
+
+  return {
+    projectId: record.projectId,
+    from: record.from,
+    to: record.to,
+    mode: record.mode,
+    title: typeof record.title === "string" ? record.title : undefined,
+    description: typeof record.description === "string" ? record.description : undefined,
+    cta: typeof record.cta === "string" ? record.cta : undefined,
+    cancel: typeof record.cancel === "string" ? record.cancel : undefined
+  };
+}
+
 export function getTransitionRoute(projectId: string): string {
   return `/projects/${projectId}/transition`;
+}
+
+export function getTransitionNextPath(transition: ProjectStageTransition): string {
+  return getStageRoute(transition.projectId, transition.to);
+}
+
+export function getTransitionFallbackPath(projectId: string): string {
+  return `/projects/${projectId}`;
 }
 
 export function buildStageTransition(input: StageTransitionInput): ProjectStageTransition | null {
@@ -118,7 +162,7 @@ export function consumeStageTransition(
     storage.setItem(TRANSITION_STORAGE_KEY, JSON.stringify(records));
   }
 
-  return record;
+  return toValidTransition(record, projectId);
 }
 
 export function beginStageTransition(input: BeginStageTransitionInput): string {

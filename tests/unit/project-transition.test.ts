@@ -1,10 +1,17 @@
+// @vitest-environment jsdom
+
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import React from "react";
 import { describe, expect, it } from "vitest";
+import { ProjectTransitionScreen } from "@/components/project-transition-screen";
 import { getTransitionConfig } from "@/lib/projects/flow";
 import {
   TRANSITION_STORAGE_KEY,
   beginStageTransition,
   buildStageTransition,
   consumeStageTransition,
+  getTransitionFallbackPath,
+  getTransitionNextPath,
   getTransitionRoute,
   persistStageTransition
 } from "@/lib/projects/transition";
@@ -108,6 +115,23 @@ describe("project transition helpers", () => {
     expect(storage.getItem(TRANSITION_STORAGE_KEY)).toBeNull();
   });
 
+  it("treats malformed transition record as missing and consumes safely", () => {
+    const storage = new MemoryStorage();
+    storage.setItem(
+      TRANSITION_STORAGE_KEY,
+      JSON.stringify({
+        p6: {
+          projectId: "p6",
+          from: "interview",
+          to: "generating"
+        }
+      })
+    );
+
+    expect(consumeStageTransition("p6", storage)).toBeNull();
+    expect(storage.getItem(TRANSITION_STORAGE_KEY)).toBeNull();
+  });
+
   it("routes transition flow and fallback flow correctly", () => {
     const storage = new MemoryStorage();
     const visited: string[] = [];
@@ -138,5 +162,75 @@ describe("project transition helpers", () => {
     expect(fallbackRoute).toBe("/projects/p3/analysis");
     expect(visited[1]).toBe("/projects/p3/analysis");
     expect(consumeStageTransition("p3", storage)).toBeNull();
+  });
+
+  it("builds transition next path and fallback path", () => {
+    const transition = buildStageTransition({
+      projectId: "p7",
+      from: "interview",
+      to: "generating"
+    });
+
+    expect(transition).not.toBeNull();
+    if (!transition) {
+      throw new Error("Expected transition to be built for interview -> generating");
+    }
+
+    expect(getTransitionNextPath(transition)).toBe("/projects/p7/generating");
+    expect(getTransitionFallbackPath("p7")).toBe("/projects/p7");
+  });
+
+  it("confirm mode triggers onConfirm only after user action", async () => {
+    const storage = new MemoryStorage();
+    const transition = buildStageTransition({
+      projectId: "p8",
+      from: "interview",
+      to: "generating"
+    });
+    expect(transition).not.toBeNull();
+    if (!transition) {
+      throw new Error("Expected transition to be built for interview -> generating");
+    }
+
+    persistStageTransition(transition, storage);
+    const visited: string[] = [];
+    const confirmed: string[] = [];
+
+    render(
+      React.createElement(ProjectTransitionScreen, {
+        projectId: "p8",
+        storage,
+        navigate: (path) => visited.push(path),
+        onConfirm: (payload) => confirmed.push(payload.projectId)
+      })
+    );
+
+    await screen.findByRole("button", { name: transition.cta ?? "继续" });
+    expect(confirmed).toEqual([]);
+    expect(visited).toEqual([]);
+
+    fireEvent.click(screen.getByRole("button", { name: transition.cta ?? "继续" }));
+
+    await waitFor(() => {
+      expect(confirmed).toEqual(["p8"]);
+      expect(visited).toEqual(["/projects/p8/generating"]);
+    });
+  });
+
+  it("falls back safely when transition context is missing", async () => {
+    const visited: string[] = [];
+    const storage = new MemoryStorage();
+
+    render(
+      React.createElement(ProjectTransitionScreen, {
+        projectId: "p9",
+        storage,
+        navigate: (path) => visited.push(path)
+      })
+    );
+
+    await screen.findByText("未找到过渡信息");
+    fireEvent.click(screen.getByRole("button", { name: "返回项目" }));
+    expect(visited).toContain("/projects/p9");
   });
 });
