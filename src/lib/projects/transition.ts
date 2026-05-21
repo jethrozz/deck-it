@@ -8,6 +8,7 @@ export type ProjectStageTransition = {
   projectId: string;
   from: WizardStepKey;
   to: WizardStepKey;
+  nextPath?: string;
   mode: StageTransitionConfig["mode"];
   title?: string;
   description?: string;
@@ -22,6 +23,7 @@ type StageTransitionInput = {
 };
 
 type BeginStageTransitionInput = StageTransitionInput & {
+  nextPath?: string;
   navigate?: (path: string) => void;
   storage?: StorageLike;
 };
@@ -84,6 +86,7 @@ function toValidTransition(value: unknown, projectId: string): ProjectStageTrans
     projectId: record.projectId,
     from: record.from,
     to: record.to,
+    nextPath: typeof record.nextPath === "string" ? record.nextPath : undefined,
     mode: record.mode,
     title: typeof record.title === "string" ? record.title : undefined,
     description: typeof record.description === "string" ? record.description : undefined,
@@ -97,7 +100,7 @@ export function getTransitionRoute(projectId: string): string {
 }
 
 export function getTransitionNextPath(transition: ProjectStageTransition): string {
-  return getStageRoute(transition.projectId, transition.to);
+  return transition.nextPath ?? getStageRoute(transition.projectId, transition.to);
 }
 
 export function getTransitionFallbackPath(projectId: string): string {
@@ -115,6 +118,7 @@ export function buildStageTransition(input: StageTransitionInput): ProjectStageT
     projectId: input.projectId,
     from: input.from,
     to: input.to,
+    nextPath: undefined,
     mode: config.mode,
     title: config.title,
     description: config.description,
@@ -166,7 +170,7 @@ export function consumeStageTransition(
 }
 
 export function beginStageTransition(input: BeginStageTransitionInput): string {
-  const targetRoute = getStageRoute(input.projectId, input.to);
+  const targetRoute = input.nextPath ?? getStageRoute(input.projectId, input.to);
   if (typeof window !== "undefined" && window.location.pathname === targetRoute) {
     return targetRoute;
   }
@@ -176,6 +180,7 @@ export function beginStageTransition(input: BeginStageTransitionInput): string {
   const navigate = input.navigate ?? ((path: string) => window.location.assign(path));
 
   if (transition) {
+    transition.nextPath = input.nextPath;
     persistStageTransition(transition, input.storage);
   }
 

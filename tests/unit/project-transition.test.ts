@@ -168,22 +168,49 @@ describe("project transition helpers", () => {
     const storage = new MemoryStorage();
     const visited: string[] = [];
     const previousPath = window.location.pathname;
+    try {
+      window.history.pushState({}, "", "/projects/p12/preferences");
 
-    window.history.pushState({}, "", "/projects/p12/preferences");
+      const route = beginStageTransition({
+        projectId: "p12",
+        from: "analysis",
+        to: "preferences",
+        storage,
+        navigate: (path) => visited.push(path)
+      });
+
+      expect(route).toBe("/projects/p12/preferences");
+      expect(visited).toEqual([]);
+      expect(consumeStageTransition("p12", storage)).toBeNull();
+    } finally {
+      window.history.pushState({}, "", previousPath);
+    }
+  });
+
+  it("prefers provided nextPath over local transition route mapping", () => {
+    const storage = new MemoryStorage();
+    const visited: string[] = [];
 
     const route = beginStageTransition({
-      projectId: "p12",
+      projectId: "p13",
       from: "analysis",
       to: "preferences",
+      nextPath: "/projects/p13/preferences?source=server",
       storage,
       navigate: (path) => visited.push(path)
     });
 
-    expect(route).toBe("/projects/p12/preferences");
-    expect(visited).toEqual([]);
-    expect(consumeStageTransition("p12", storage)).toBeNull();
+    expect(route).toBe("/projects/p13/transition");
+    expect(visited).toEqual(["/projects/p13/transition"]);
 
-    window.history.pushState({}, "", previousPath);
+    const transition = consumeStageTransition("p13", storage);
+    expect(transition).toMatchObject({
+      projectId: "p13",
+      from: "analysis",
+      to: "preferences",
+      nextPath: "/projects/p13/preferences?source=server"
+    });
+    expect(getTransitionNextPath(transition!)).toBe("/projects/p13/preferences?source=server");
   });
 
   it("builds transition next path and fallback path", () => {

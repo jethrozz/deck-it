@@ -127,7 +127,8 @@ export function InterviewPanel({
         beginStageTransition({
           projectId,
           from: "interview",
-          to: "generating"
+          to: "generating",
+          nextPath: payload.nextPath
         });
         return;
       }

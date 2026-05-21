@@ -372,11 +372,12 @@ export function AnalysisConfirmStep({
         throw new Error(await response.text());
       }
 
-      await response.json();
+      const payload = (await response.json()) as { nextPath?: string };
       beginStageTransition({
         projectId,
         from: "analysis",
-        to: "preferences"
+        to: "preferences",
+        nextPath: payload.nextPath
       });
     } catch (submitError) {
       setError(getErrorMessage(submitError));
@@ -488,11 +489,12 @@ export function PreferencesStep({
         throw new Error(await response.text());
       }
 
-      await response.json();
+      const payload = (await response.json()) as { nextPath?: string };
       beginStageTransition({
         projectId,
         from: "preferences",
-        to: "interview"
+        to: "interview",
+        nextPath: payload.nextPath
       });
     } catch (submitError) {
       setError(getErrorMessage(submitError));

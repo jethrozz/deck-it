@@ -91,7 +91,8 @@ export function GenerationStatusPanel({
           beginStageTransition({
             projectId,
             from: "generating",
-            to: "complete"
+            to: "complete",
+            nextPath: payload.nextPath
           });
         }, 900);
       })
