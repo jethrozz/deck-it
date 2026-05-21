@@ -2,7 +2,7 @@
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ProjectTransitionScreen } from "@/components/project-transition-screen";
 import { getTransitionConfig } from "@/lib/projects/flow";
 import {
@@ -217,6 +217,41 @@ describe("project transition helpers", () => {
     });
   });
 
+  it("auto mode redirects after delay", () => {
+    vi.useFakeTimers();
+    try {
+      const storage = new MemoryStorage();
+      const transition = buildStageTransition({
+        projectId: "p10",
+        from: "analysis",
+        to: "preferences"
+      });
+      expect(transition).not.toBeNull();
+      if (!transition) {
+        throw new Error("Expected transition to be built for analysis -> preferences");
+      }
+
+      persistStageTransition(transition, storage);
+      const visited: string[] = [];
+
+      render(
+        React.createElement(ProjectTransitionScreen, {
+          projectId: "p10",
+          storage,
+          navigate: (path) => visited.push(path)
+        })
+      );
+
+      expect(visited).toEqual([]);
+      vi.advanceTimersByTime(999);
+      expect(visited).toEqual([]);
+      vi.advanceTimersByTime(1);
+      expect(visited).toEqual(["/projects/p10/preferences"]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("falls back safely when transition context is missing", async () => {
     const visited: string[] = [];
     const storage = new MemoryStorage();
@@ -232,5 +267,30 @@ describe("project transition helpers", () => {
     await screen.findByText("未找到过渡信息");
     fireEvent.click(screen.getByRole("button", { name: "返回项目" }));
     expect(visited).toContain("/projects/p9");
+  });
+
+  it("fallback mode auto-redirects if user does nothing", () => {
+    vi.useFakeTimers();
+    try {
+      const visited: string[] = [];
+      const storage = new MemoryStorage();
+
+      render(
+        React.createElement(ProjectTransitionScreen, {
+          projectId: "p11",
+          storage,
+          navigate: (path) => visited.push(path)
+        })
+      );
+
+      expect(screen.getByText("未找到过渡信息")).not.toBeNull();
+      expect(visited).toEqual([]);
+      vi.advanceTimersByTime(1199);
+      expect(visited).toEqual([]);
+      vi.advanceTimersByTime(1);
+      expect(visited).toEqual(["/projects/p11"]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
