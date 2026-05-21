@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, Clock3, LoaderCircle, Sparkles, XCircle } from "lucide-react";
 import { Button, Surface, cx } from "@/components/ui/primitives";
 import type { DesignPlan, GenerationStatus } from "@/lib/domain/schemas";
+import { beginStageTransition } from "@/lib/projects/transition";
 
 type RenderingSummary = {
   id: string;
@@ -19,10 +20,6 @@ type GenerateResponse = {
   brief: { id: string; status: string };
   nextPath: string;
 };
-
-function getProjectNavigationPath(projectId: string, nextPath: string) {
-  return nextPath.startsWith("/projects/") ? nextPath : `/projects/${projectId}${nextPath}`;
-}
 
 const taskDescriptions: Record<GenerationStatus["tasks"][number]["key"], string> = {
   requirement_profile: "正在整理你的生活方式、空间诉求和设计偏好。",
@@ -91,7 +88,11 @@ export function GenerationStatusPanel({
         setTasks(payload.status.tasks);
         setPreviewImage(payload.renderings.find((item) => item.imageUrl)?.imageUrl ?? null);
         window.setTimeout(() => {
-          window.location.assign(getProjectNavigationPath(projectId, payload.nextPath));
+          beginStageTransition({
+            projectId,
+            from: "generating",
+            to: "complete"
+          });
         }, 900);
       })
       .catch((requestError) => {

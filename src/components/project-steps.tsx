@@ -22,6 +22,7 @@ import { InterviewPanel } from "@/components/interview-panel";
 import { StyleBudgetCards } from "@/components/style-budget-cards";
 import { Button, FieldInput, FieldTextarea, SectionTitle, Surface } from "@/components/ui/primitives";
 import type { BudgetTier, FloorPlanAnalysis, PreferenceProfile, Style } from "@/lib/domain/schemas";
+import { beginStageTransition } from "@/lib/projects/transition";
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "操作失败，请稍后重试。";
@@ -371,8 +372,12 @@ export function AnalysisConfirmStep({
         throw new Error(await response.text());
       }
 
-      const result = (await response.json()) as { nextPath: string };
-      window.location.assign(result.nextPath);
+      await response.json();
+      beginStageTransition({
+        projectId,
+        from: "analysis",
+        to: "preferences"
+      });
     } catch (submitError) {
       setError(getErrorMessage(submitError));
       setBusy(false);
@@ -483,8 +488,12 @@ export function PreferencesStep({
         throw new Error(await response.text());
       }
 
-      const result = (await response.json()) as { nextPath: string };
-      window.location.assign(result.nextPath);
+      await response.json();
+      beginStageTransition({
+        projectId,
+        from: "preferences",
+        to: "interview"
+      });
     } catch (submitError) {
       setError(getErrorMessage(submitError));
       setBusy(false);

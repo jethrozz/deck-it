@@ -166,6 +166,11 @@ export function consumeStageTransition(
 }
 
 export function beginStageTransition(input: BeginStageTransitionInput): string {
+  const targetRoute = getStageRoute(input.projectId, input.to);
+  if (typeof window !== "undefined" && window.location.pathname === targetRoute) {
+    return targetRoute;
+  }
+
   const transition = buildStageTransition(input);
   const route = transition ? getTransitionRoute(input.projectId) : getStageRoute(input.projectId, input.to);
   const navigate = input.navigate ?? ((path: string) => window.location.assign(path));

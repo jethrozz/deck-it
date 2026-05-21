@@ -164,6 +164,28 @@ describe("project transition helpers", () => {
     expect(consumeStageTransition("p3", storage)).toBeNull();
   });
 
+  it("no-ops when already on the target stage path", () => {
+    const storage = new MemoryStorage();
+    const visited: string[] = [];
+    const previousPath = window.location.pathname;
+
+    window.history.pushState({}, "", "/projects/p12/preferences");
+
+    const route = beginStageTransition({
+      projectId: "p12",
+      from: "analysis",
+      to: "preferences",
+      storage,
+      navigate: (path) => visited.push(path)
+    });
+
+    expect(route).toBe("/projects/p12/preferences");
+    expect(visited).toEqual([]);
+    expect(consumeStageTransition("p12", storage)).toBeNull();
+
+    window.history.pushState({}, "", previousPath);
+  });
+
   it("builds transition next path and fallback path", () => {
     const transition = buildStageTransition({
       projectId: "p7",

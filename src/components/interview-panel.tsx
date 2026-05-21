@@ -5,6 +5,7 @@ import { LoaderCircle, Send } from "lucide-react";
 import { budgetLabels, roomLabels, styleLabels } from "@/lib/projects/labels";
 import { Button, FieldInput, Surface, cx } from "@/components/ui/primitives";
 import type { AgentInterviewResponse, FloorPlanAnalysis, PreferenceProfile } from "@/lib/domain/schemas";
+import { beginStageTransition } from "@/lib/projects/transition";
 
 type ConversationMessage = {
   id: string;
@@ -36,10 +37,6 @@ function parseAgentMetadata(value: unknown): AgentInterviewResponse | null {
   }
 
   return null;
-}
-
-function getProjectNavigationPath(projectId: string, nextPath: string) {
-  return nextPath.startsWith("/projects/") ? nextPath : `/projects/${projectId}${nextPath}`;
 }
 
 export function InterviewPanel({
@@ -127,7 +124,11 @@ export function InterviewPanel({
             metadataJson: payload
           }
         ]);
-        window.location.assign(getProjectNavigationPath(projectId, payload.nextPath));
+        beginStageTransition({
+          projectId,
+          from: "interview",
+          to: "generating"
+        });
         return;
       }
 
