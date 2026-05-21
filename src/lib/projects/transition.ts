@@ -26,6 +26,23 @@ type BeginStageTransitionInput = StageTransitionInput & {
   storage?: StorageLike;
 };
 
+function readTransitionRecords(storage: StorageLike): Record<string, ProjectStageTransition> {
+  const raw = storage.getItem(TRANSITION_STORAGE_KEY);
+  if (!raw) {
+    return {};
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return {};
+    }
+    return parsed as Record<string, ProjectStageTransition>;
+  } catch {
+    return {};
+  }
+}
+
 function getDefaultStorage(): StorageLike | null {
   if (typeof window === "undefined") {
     return null;
@@ -70,7 +87,7 @@ export function persistStageTransition(
     return;
   }
 
-  const records = JSON.parse(storage.getItem(TRANSITION_STORAGE_KEY) ?? "{}") as Record<string, ProjectStageTransition>;
+  const records = readTransitionRecords(storage);
   records[transition.projectId] = transition;
   storage.setItem(TRANSITION_STORAGE_KEY, JSON.stringify(records));
 }
@@ -83,10 +100,13 @@ export function consumeStageTransition(
     return null;
   }
 
-  const records = JSON.parse(storage.getItem(TRANSITION_STORAGE_KEY) ?? "{}") as Record<string, ProjectStageTransition>;
+  const records = readTransitionRecords(storage);
   const record = records[projectId] ?? null;
 
   if (!record) {
+    if (storage.getItem(TRANSITION_STORAGE_KEY) !== null && Object.keys(records).length === 0) {
+      storage.removeItem(TRANSITION_STORAGE_KEY);
+    }
     return null;
   }
 

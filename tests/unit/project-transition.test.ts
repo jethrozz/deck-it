@@ -60,7 +60,10 @@ describe("project transition helpers", () => {
     });
 
     expect(transition).not.toBeNull();
-    persistStageTransition(transition!, storage);
+    if (!transition) {
+      throw new Error("Expected transition to be built for interview -> generating");
+    }
+    persistStageTransition(transition, storage);
 
     expect(storage.getItem(TRANSITION_STORAGE_KEY)).toContain("\"p2\"");
     expect(consumeStageTransition("p2", storage)).toMatchObject({
@@ -70,6 +73,38 @@ describe("project transition helpers", () => {
       mode: "confirm"
     });
     expect(consumeStageTransition("p2", storage)).toBeNull();
+    expect(storage.getItem(TRANSITION_STORAGE_KEY)).toBeNull();
+  });
+
+  it("recovers when storage payload is malformed JSON", () => {
+    const storage = new MemoryStorage();
+    storage.setItem(TRANSITION_STORAGE_KEY, "{invalid json");
+
+    const transition = buildStageTransition({
+      projectId: "p4",
+      from: "analysis",
+      to: "preferences"
+    });
+
+    expect(transition).not.toBeNull();
+    if (!transition) {
+      throw new Error("Expected transition to be built for analysis -> preferences");
+    }
+
+    expect(() => persistStageTransition(transition, storage)).not.toThrow();
+    expect(consumeStageTransition("p4", storage)).toMatchObject({
+      projectId: "p4",
+      from: "analysis",
+      to: "preferences",
+      mode: "auto"
+    });
+  });
+
+  it("clears malformed/invalid payload shape during consume", () => {
+    const storage = new MemoryStorage();
+    storage.setItem(TRANSITION_STORAGE_KEY, "\"not-an-object\"");
+
+    expect(consumeStageTransition("p5", storage)).toBeNull();
     expect(storage.getItem(TRANSITION_STORAGE_KEY)).toBeNull();
   });
 
