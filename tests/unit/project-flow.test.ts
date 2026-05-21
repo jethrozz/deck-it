@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { getProjectRoute, getProjectStep, getStepIndex, wizardSteps } from "@/lib/projects/flow";
+import {
+  getProjectRoute,
+  getProjectStep,
+  getStepIndex,
+  getTransitionConfig,
+  isAutoStageTransition,
+  wizardSteps
+} from "@/lib/projects/flow";
 
 describe("project flow", () => {
   it("maps project statuses to canonical wizard routes", () => {
@@ -56,5 +63,21 @@ describe("project flow", () => {
 
     expect(() => getProjectStep("NOT_A_STATUS" as never)).toThrow(/Unknown project status/);
     expect(() => getStepIndex("NOT_A_STEP" as never)).toThrow(/Unknown wizard step/);
+  });
+
+  it("exposes stage transition metadata for known transitions", () => {
+    expect(getTransitionConfig("analysis", "preferences")?.mode).toBe("auto");
+    expect(getTransitionConfig("preferences", "interview")?.mode).toBe("auto");
+    expect(getTransitionConfig("interview", "generating")).toMatchObject({
+      mode: "confirm",
+      title: expect.any(String),
+      description: expect.any(String),
+      cta: expect.any(String),
+      cancel: expect.any(String)
+    });
+    expect(getTransitionConfig("generating", "complete")?.mode).toBe("auto");
+    expect(getTransitionConfig("upload", "analysis")).toBeNull();
+    expect(isAutoStageTransition("analysis", "preferences")).toBe(true);
+    expect(isAutoStageTransition("interview", "generating")).toBe(false);
   });
 });

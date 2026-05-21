@@ -14,6 +14,18 @@ export type WizardStep = {
   path: string;
 };
 
+export type TransitionMode = "auto" | "confirm";
+
+export type StageTransitionConfig = {
+  from: WizardStepKey;
+  to: WizardStepKey;
+  mode: TransitionMode;
+  title?: string;
+  description?: string;
+  cta?: string;
+  cancel?: string;
+};
+
 export const wizardSteps = [
   { key: "upload", label: "上传户型图", path: "upload" },
   { key: "analysis", label: "户型分析", path: "analysis" },
@@ -24,6 +36,23 @@ export const wizardSteps = [
 ] as const satisfies readonly WizardStep[];
 
 const wizardStepByKey = new Map<WizardStepKey, WizardStep>(wizardSteps.map((step) => [step.key, step]));
+const transitionConfigByKey = new Map<string, StageTransitionConfig>([
+  ["analysis:preferences", { from: "analysis", to: "preferences", mode: "auto" }],
+  ["preferences:interview", { from: "preferences", to: "interview", mode: "auto" }],
+  [
+    "interview:generating",
+    {
+      from: "interview",
+      to: "generating",
+      mode: "confirm",
+      title: "确认开始生成方案？",
+      description: "系统将基于户型分析与访谈结果开始生成完整方案。",
+      cta: "开始生成",
+      cancel: "稍后再说"
+    }
+  ],
+  ["generating:complete", { from: "generating", to: "complete", mode: "auto" }]
+]);
 
 const statusToStep: Record<ProjectStatus, WizardStepKey> = {
   CREATED: "upload",
@@ -79,4 +108,17 @@ export function getStepIndex(stepKey: WizardStepKey) {
   }
 
   return stepIndex;
+}
+
+function toTransitionKey(from: WizardStepKey, to: WizardStepKey) {
+  return `${from}:${to}`;
+}
+
+export function getTransitionConfig(from: WizardStepKey, to: WizardStepKey): StageTransitionConfig | null {
+  return transitionConfigByKey.get(toTransitionKey(from, to)) ?? null;
+}
+
+export function isAutoStageTransition(from: WizardStepKey, to: WizardStepKey): boolean {
+  const config = getTransitionConfig(from, to);
+  return config?.mode === "auto";
 }
