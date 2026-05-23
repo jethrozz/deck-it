@@ -29,4 +29,28 @@ describe("calculateOrderPricing", () => {
       payableAmount: 199
     });
   });
+
+  it("rejects invalid original amount", () => {
+    expect(() => calculateOrderPricing({ originalAmount: 0, coupon: null })).toThrow(
+      "originalAmount must be a finite number greater than 0"
+    );
+  });
+
+  it("rejects invalid discount rate", () => {
+    expect(() =>
+      calculateOrderPricing({
+        originalAmount: 199,
+        coupon: { code: "BAD", discountRate: 1.2, isTest: false, minPayableAmount: null }
+      })
+    ).toThrow("discountRate must be a finite number in the range (0, 1]");
+  });
+
+  it("rejects invalid min payable amount for test coupons", () => {
+    expect(() =>
+      calculateOrderPricing({
+        originalAmount: 199,
+        coupon: { code: "TESTPAY", discountRate: 0.8, isTest: true, minPayableAmount: 0 }
+      })
+    ).toThrow("minPayableAmount must be a finite number greater than 0");
+  });
 });

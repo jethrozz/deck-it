@@ -16,6 +16,14 @@ describe("normalizeContactIdentity", () => {
     });
   });
 
+  it("rejects overlong phone values", () => {
+    expect(() => normalizeContactIdentity("", "138001380001")).toThrow("手机号格式不正确");
+  });
+
+  it("rejects phone values that do not start with 1", () => {
+    expect(() => normalizeContactIdentity("", "23800138000")).toThrow("手机号格式不正确");
+  });
+
   it("rejects invalid email", () => {
     expect(() => normalizeContactIdentity("not-an-email", "")).toThrow("邮箱格式不正确");
   });

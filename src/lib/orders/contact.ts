@@ -17,7 +17,7 @@ function normalizePhoneDigits(phone: string) {
   return digits;
 }
 
-export function normalizeContactIdentity(email: string, phone: string): ContactIdentity {
+function normalizeEmail(email: string): ContactIdentity {
   const trimmedEmail = email.trim().toLowerCase();
   if (trimmedEmail) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(trimmedEmail)) {
@@ -30,12 +30,17 @@ export function normalizeContactIdentity(email: string, phone: string): ContactI
     };
   }
 
+  throw new Error("请填写邮箱或手机号");
+}
+
+function normalizePhone(phone: string): ContactIdentity {
   const digits = normalizePhoneDigits(phone);
   if (!digits) {
     throw new Error("请填写邮箱或手机号");
   }
 
-  if (digits.length < 11) {
+  // Normalize to Mainland CN mobile identity: 11 digits, leading 1.
+  if (!/^1\d{10}$/u.test(digits)) {
     throw new Error("手机号格式不正确");
   }
 
@@ -43,4 +48,26 @@ export function normalizeContactIdentity(email: string, phone: string): ContactI
     type: "phone",
     value: digits
   };
+}
+
+export function normalizeContactValue(value: string): ContactIdentity {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new Error("请填写邮箱或手机号");
+  }
+
+  if (trimmed.includes("@")) {
+    return normalizeEmail(trimmed);
+  }
+
+  return normalizePhone(trimmed);
+}
+
+export function normalizeContactIdentity(email: string, phone: string): ContactIdentity {
+  const trimmedEmail = email.trim();
+  if (trimmedEmail) {
+    return normalizeEmail(trimmedEmail);
+  }
+
+  return normalizePhone(phone);
 }
