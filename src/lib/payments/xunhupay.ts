@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 
 type XunhuPayParams = Record<string, string | undefined | null>;
 
@@ -26,6 +26,13 @@ export function verifyXunhuPayHash(params: XunhuPayParams, appSecret: string) {
     return false;
   }
 
-  const expectedHash = buildXunhuPayHash(params, appSecret);
-  return receivedHash === expectedHash;
+  const expectedHash = buildXunhuPayHash(params, appSecret).toLowerCase();
+  const receivedBuffer = Buffer.from(receivedHash);
+  const expectedBuffer = Buffer.from(expectedHash);
+
+  if (receivedBuffer.length !== expectedBuffer.length) {
+    return false;
+  }
+
+  return timingSafeEqual(receivedBuffer, expectedBuffer);
 }

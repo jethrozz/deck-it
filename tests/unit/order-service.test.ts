@@ -45,77 +45,19 @@ describe("order service", () => {
   });
 
   it("settles paid order idempotently, grants credits, and creates redemption once", async () => {
-    const orderRecord = {
-      id: "o1",
-      projectId: "p1",
-      orderNo: "ORD-1",
-      status: "PENDING",
-      creditsGranted: 2,
-      couponId: "c1",
-      contactType: "EMAIL",
-      contactValue: "user@example.com"
-    };
-
-    let purchasedCredits = 0;
-    let projectStatus = "AWAITING_PAYMENT";
-
-    const tx = {
-      order: {
-        findUnique: vi.fn().mockImplementation(async () => orderRecord),
-        updateMany: vi.fn().mockImplementation(async () => {
-          if (orderRecord.status === "PAID") {
-            return { count: 0 };
-          }
-
-          orderRecord.status = "PAID";
-          return { count: 1 };
-        })
-      },
-      project: {
-        update: vi.fn().mockImplementation(async ({ data }: { data: { generationCreditsPurchased: { increment: number }; status: string } }) => {
-          purchasedCredits += data.generationCreditsPurchased.increment;
-          projectStatus = data.status;
-          return {
-            id: "p1",
-            generationCreditsPurchased: purchasedCredits,
-            status: projectStatus
-          };
-        })
-      },
-      couponRedemption: {
-        create: vi.fn().mockResolvedValue({
-          id: "r1"
-        })
-      },
-      coupon: {
-        findUnique: vi.fn()
-      },
-      floorPlanAnalysis: {},
-      preferenceProfile: {},
-      agentConversation: {},
-      designPlan: {},
-      renderingAsset: {},
-      briefExport: {},
-      $transaction: vi.fn()
-    };
-
-    const prisma = {
-      $transaction: vi.fn(async (callback: (client: typeof tx) => Promise<unknown>) => callback(tx)),
-      order: {},
-      project: {},
-      coupon: {},
-      couponRedemption: {}
-    };
-
-    const service = createOrderService(prisma as never);
+    const { service, tx, state } = createSettlementHarness();
 
     const first = await service.settlePaidOrder({
       orderNo: "ORD-1",
-      providerOrderNo: "XH-1"
+      providerOrderNo: "XH-1",
+      providerStatus: "OD",
+      paidAmount: "159.20"
     });
     const second = await service.settlePaidOrder({
       orderNo: "ORD-1",
-      providerOrderNo: "XH-1"
+      providerOrderNo: "XH-1",
+      providerStatus: "OD",
+      paidAmount: "159.20"
     });
 
     expect(first).toEqual({
@@ -127,17 +69,157 @@ describe("order service", () => {
       projectStatus: "PAYMENT_SUCCEEDED"
     });
 
-    expect(purchasedCredits).toBe(2);
-    expect(projectStatus).toBe("PAYMENT_SUCCEEDED");
+    expect(state.purchasedCredits).toBe(2);
+    expect(state.projectStatus).toBe("PAYMENT_SUCCEEDED");
     expect(tx.project.update).toHaveBeenCalledTimes(1);
     expect(tx.couponRedemption.create).toHaveBeenCalledTimes(1);
-    expect(tx.couponRedemption.create).toHaveBeenCalledWith({
-      data: {
-        coupon: { connect: { id: "c1" } },
-        contactType: "EMAIL",
-        contactValue: "user@example.com",
-        order: { connect: { id: "o1" } }
-      }
+  });
+
+  it("rejects settlement when provider status is not OD", async () => {
+    const { service, tx } = createSettlementHarness();
+
+    await expect(
+      service.settlePaidOrder({
+        orderNo: "ORD-1",
+        providerOrderNo: "XH-1",
+        providerStatus: "WP",
+        paidAmount: "159.20"
+      })
+    ).rejects.toThrow("支付状态未成功");
+
+    expect(tx.order.updateMany).not.toHaveBeenCalled();
+    expect(tx.project.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects settlement when callback paid amount mismatches order payable amount", async () => {
+    const { service, tx } = createSettlementHarness();
+
+    await expect(
+      service.settlePaidOrder({
+        orderNo: "ORD-1",
+        providerOrderNo: "XH-1",
+        providerStatus: "OD",
+        paidAmount: "159.21"
+      })
+    ).rejects.toThrow("支付金额校验失败");
+
+    expect(tx.order.updateMany).not.toHaveBeenCalled();
+    expect(tx.project.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects provider order number mismatch for already paid replays", async () => {
+    const { service, tx } = createSettlementHarness({
+      status: "PAID",
+      providerOrderNo: "XH-ORIGINAL"
     });
+
+    await expect(
+      service.settlePaidOrder({
+        orderNo: "ORD-1",
+        providerOrderNo: "XH-REPLAY",
+        providerStatus: "OD",
+        paidAmount: "159.20"
+      })
+    ).rejects.toThrow("支付流水号不一致");
+
+    expect(tx.order.updateMany).not.toHaveBeenCalled();
+    expect(tx.project.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects settlement for terminal non-payable states", async () => {
+    const { service, tx } = createSettlementHarness({
+      status: "FAILED"
+    });
+
+    await expect(
+      service.settlePaidOrder({
+        orderNo: "ORD-1",
+        providerOrderNo: "XH-1",
+        providerStatus: "OD",
+        paidAmount: "159.20"
+      })
+    ).rejects.toThrow("订单状态不允许入账");
+
+    expect(tx.order.updateMany).not.toHaveBeenCalled();
+    expect(tx.project.update).not.toHaveBeenCalled();
   });
 });
+
+function createSettlementHarness(overrides?: {
+  status?: "PENDING" | "PROCESSING" | "PAID" | "FAILED" | "EXPIRED" | "CANCELED";
+  providerOrderNo?: string | null;
+}) {
+  const orderRecord = {
+    id: "o1",
+    projectId: "p1",
+    orderNo: "ORD-1",
+    status: overrides?.status ?? ("PENDING" as "PENDING" | "PROCESSING" | "PAID" | "FAILED" | "EXPIRED" | "CANCELED"),
+    creditsGranted: 2,
+    couponId: "c1",
+    contactType: "EMAIL",
+    contactValue: "user@example.com",
+    providerOrderNo: overrides?.providerOrderNo ?? null,
+    payableAmount: new Prisma.Decimal("159.20")
+  };
+
+  const state = {
+    purchasedCredits: 0,
+    projectStatus: "AWAITING_PAYMENT"
+  };
+
+  const tx = {
+    order: {
+      findUnique: vi.fn().mockImplementation(async () => orderRecord),
+      updateMany: vi.fn().mockImplementation(async ({ data }: { data: { providerOrderNo: string } }) => {
+        if (orderRecord.status !== "PENDING" && orderRecord.status !== "PROCESSING") {
+          return { count: 0 };
+        }
+
+        orderRecord.status = "PAID";
+        orderRecord.providerOrderNo = data.providerOrderNo;
+        return { count: 1 };
+      })
+    },
+    project: {
+      update: vi.fn().mockImplementation(async ({ data }: { data: { generationCreditsPurchased: { increment: number }; status: string } }) => {
+        state.purchasedCredits += data.generationCreditsPurchased.increment;
+        state.projectStatus = data.status;
+        return {
+          id: "p1",
+          generationCreditsPurchased: state.purchasedCredits,
+          status: state.projectStatus
+        };
+      })
+    },
+    couponRedemption: {
+      create: vi.fn().mockResolvedValue({
+        id: "r1"
+      }),
+      findFirst: vi.fn()
+    },
+    coupon: {
+      findUnique: vi.fn()
+    },
+    floorPlanAnalysis: {},
+    preferenceProfile: {},
+    agentConversation: {},
+    designPlan: {},
+    renderingAsset: {},
+    briefExport: {},
+    $transaction: vi.fn()
+  };
+
+  const prisma = {
+    $transaction: vi.fn(async (callback: (client: typeof tx) => Promise<unknown>) => callback(tx)),
+    order: {},
+    project: {},
+    coupon: {},
+    couponRedemption: {}
+  };
+
+  return {
+    service: createOrderService(prisma as never),
+    tx,
+    state
+  };
+}

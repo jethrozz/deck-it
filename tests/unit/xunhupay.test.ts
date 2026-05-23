@@ -2,6 +2,20 @@ import { describe, expect, it } from "vitest";
 import { buildXunhuPayHash, verifyXunhuPayHash } from "@/lib/payments/xunhupay";
 
 describe("xunhupay signing helpers", () => {
+  it("matches a known digest vector", () => {
+    const hash = buildXunhuPayHash(
+      {
+        appid: "app_123",
+        trade_order_id: "ORD-1",
+        total_fee: "0.01",
+        title: "Deck It 2次生成包"
+      },
+      "secret"
+    );
+
+    expect(hash).toBe("db5a79a7fd70c430e22e6a4484191b6d");
+  });
+
   it("builds deterministic signatures for sorted non-empty params", () => {
     const hash = buildXunhuPayHash(
       {
