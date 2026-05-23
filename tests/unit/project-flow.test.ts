@@ -20,6 +20,9 @@ describe("project flow", () => {
     expect(getProjectRoute(projectId, "PREFERENCES_COLLECTED")).toBe("/projects/p1/interview");
     expect(getProjectRoute(projectId, "INTERVIEWING")).toBe("/projects/p1/interview");
     expect(getProjectRoute(projectId, "INTERVIEW_COMPLETE")).toBe("/projects/p1/generating");
+    expect(getProjectRoute(projectId, "AWAITING_PAYMENT")).toBe("/projects/p1/payment");
+    expect(getProjectRoute(projectId, "PAYMENT_PROCESSING")).toBe("/projects/p1/payment");
+    expect(getProjectRoute(projectId, "PAYMENT_SUCCEEDED")).toBe("/projects/p1/payment");
     expect(getProjectRoute(projectId, "GENERATING_REQUIREMENT_PROFILE")).toBe("/projects/p1/generating");
     expect(getProjectRoute(projectId, "GENERATING_PLAN")).toBe("/projects/p1/generating");
     expect(getProjectRoute(projectId, "PLAN_READY")).toBe("/projects/p1/generating");
@@ -43,6 +46,9 @@ describe("project flow", () => {
     expect(getProjectStep("FLOOR_PLAN_ANALYZING").key).toBe("analysis");
     expect(getProjectStep("ANALYSIS_CONFIRMED").key).toBe("preferences");
     expect(getProjectStep("INTERVIEWING").key).toBe("interview");
+    expect(getProjectStep("AWAITING_PAYMENT").key).toBe("generating");
+    expect(getProjectStep("PAYMENT_PROCESSING").key).toBe("generating");
+    expect(getProjectStep("PAYMENT_SUCCEEDED").key).toBe("generating");
     expect(getProjectStep("GENERATING_PLAN").key).toBe("generating");
     expect(getProjectStep("BRIEF_READY").key).toBe("complete");
   });

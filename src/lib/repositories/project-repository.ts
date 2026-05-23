@@ -5,6 +5,9 @@ type PrismaLike = Pick<
   PrismaClient,
   | "$transaction"
   | "project"
+  | "order"
+  | "coupon"
+  | "couponRedemption"
   | "floorPlanAnalysis"
   | "preferenceProfile"
   | "agentConversation"
@@ -54,6 +57,96 @@ export function createProjectRepository(prisma: PrismaLike) {
         where: { id: projectId },
         data: { status }
       });
+    },
+
+    grantProjectCredits(projectId: string, creditsGranted: number, nextStatus: ProjectStatus) {
+      return prisma.project.update({
+        where: { id: projectId },
+        data: {
+          generationCreditsPurchased: {
+            increment: creditsGranted
+          },
+          status: nextStatus
+        }
+      });
+    },
+
+    async consumeProjectCredit(projectId: string) {
+      const allowedStatuses: ProjectStatus[] = ["PAYMENT_SUCCEEDED", "BRIEF_READY", "INTERVIEW_COMPLETE"];
+      const project = await prisma.project.findUnique({
+        where: { id: projectId },
+        select: {
+          status: true,
+          generationCreditsPurchased: true,
+          generationCreditsUsed: true
+        }
+      });
+
+      if (!project || !allowedStatuses.includes(project.status)) {
+        return false;
+      }
+
+      if (project.generationCreditsPurchased <= project.generationCreditsUsed) {
+        return false;
+      }
+
+      const result = await prisma.project.updateMany({
+        where: {
+          id: projectId,
+          status: { in: allowedStatuses },
+          generationCreditsUsed: project.generationCreditsUsed
+        },
+        data: {
+          generationCreditsUsed: {
+            increment: 1
+          }
+        }
+      });
+
+      return result.count === 1;
+    },
+
+    findOrderById(orderId: string) {
+      return prisma.order.findUnique({
+        where: { id: orderId }
+      });
+    },
+
+    findOrderByOrderNo(orderNo: string) {
+      return prisma.order.findUnique({
+        where: { orderNo }
+      });
+    },
+
+    findLatestOpenOrder(projectId: string) {
+      return prisma.order.findFirst({
+        where: {
+          projectId,
+          status: { in: ["PENDING", "PROCESSING"] }
+        },
+        orderBy: { createdAt: "desc" }
+      });
+    },
+
+    createOrder(data: Prisma.OrderUncheckedCreateInput) {
+      return prisma.order.create({ data });
+    },
+
+    updateOrder(orderId: string, data: Prisma.OrderUpdateInput) {
+      return prisma.order.update({
+        where: { id: orderId },
+        data
+      });
+    },
+
+    findCouponByCode(code: string) {
+      return prisma.coupon.findUnique({
+        where: { code }
+      });
+    },
+
+    createCouponRedemption(data: Prisma.CouponRedemptionUncheckedCreateInput) {
+      return prisma.couponRedemption.create({ data });
     },
 
     async confirmFloorPlanAnalysis(projectId: string, userCorrections: string[]) {

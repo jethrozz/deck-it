@@ -63,6 +63,9 @@ const statusToStep: Record<ProjectStatus, WizardStepKey> = {
   PREFERENCES_COLLECTED: "interview",
   INTERVIEWING: "interview",
   INTERVIEW_COMPLETE: "generating",
+  AWAITING_PAYMENT: "generating",
+  PAYMENT_PROCESSING: "generating",
+  PAYMENT_SUCCEEDED: "generating",
   GENERATING_REQUIREMENT_PROFILE: "generating",
   GENERATING_PLAN: "generating",
   PLAN_READY: "generating",
@@ -95,6 +98,10 @@ export function getProjectStep(status: ProjectStatus): WizardStep {
 export function getProjectRoute(projectId: string, status: ProjectStatus) {
   if (status === "FLOOR_PLAN_ANALYZING") {
     return `/projects/${projectId}/analysis/loading`;
+  }
+
+  if (status === "AWAITING_PAYMENT" || status === "PAYMENT_PROCESSING" || status === "PAYMENT_SUCCEEDED") {
+    return `/projects/${projectId}/payment`;
   }
 
   return `/projects/${projectId}/${getProjectStep(status).path}`;
