@@ -1,11 +1,14 @@
 "use client";
 
+import React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LoaderCircle, Send } from "lucide-react";
 import { budgetLabels, roomLabels, styleLabels } from "@/lib/projects/labels";
 import { Button, FieldInput, Surface, cx } from "@/components/ui/primitives";
 import type { AgentInterviewResponse, FloorPlanAnalysis, PreferenceProfile } from "@/lib/domain/schemas";
 import { beginStageTransition } from "@/lib/projects/transition";
+
+const COMPLETE_MESSAGE_VISIBLE_MS = 1400;
 
 type ConversationMessage = {
   id: string;
@@ -56,6 +59,7 @@ export function InterviewPanel({
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [completedTransition, setCompletedTransition] = useState<{ nextPath: string } | null>(null);
   const initializedRef = useRef(false);
   const requestInFlightRef = useRef(false);
   const endRef = useRef<HTMLDivElement | null>(null);
@@ -67,7 +71,24 @@ export function InterviewPanel({
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [conversation, pending]);
+  }, [conversation, pending, completedTransition]);
+
+  useEffect(() => {
+    if (!completedTransition) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      beginStageTransition({
+        projectId,
+        from: "interview",
+        to: "generating",
+        nextPath: completedTransition.nextPath
+      });
+    }, COMPLETE_MESSAGE_VISIBLE_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [completedTransition, projectId]);
 
   useEffect(() => {
     if (initializedRef.current || conversation.some((item) => item.role === "agent")) {
@@ -124,12 +145,7 @@ export function InterviewPanel({
             metadataJson: payload
           }
         ]);
-        beginStageTransition({
-          projectId,
-          from: "interview",
-          to: "generating",
-          nextPath: payload.nextPath
-        });
+        setCompletedTransition({ nextPath: payload.nextPath });
         return;
       }
 
@@ -151,6 +167,7 @@ export function InterviewPanel({
   }
 
   const progress = latestAgentTurn && "progress" in latestAgentTurn ? latestAgentTurn.progress : { current: 0, max: 12 };
+  const isLocked = pending || completedTransition !== null;
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_320px]">
@@ -192,7 +209,7 @@ export function InterviewPanel({
                 key={option}
                 type="button"
                 variant="secondary"
-                disabled={pending}
+                disabled={isLocked}
                 onClick={() => setDraft(option)}
                 className="px-3 py-2"
               >
@@ -206,7 +223,7 @@ export function InterviewPanel({
           className="grid gap-3"
           onSubmit={(event) => {
             event.preventDefault();
-            if (!draft.trim() || pending) {
+            if (!draft.trim() || isLocked) {
               return;
             }
 
@@ -218,11 +235,18 @@ export function InterviewPanel({
           <FieldInput
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
+            disabled={completedTransition !== null}
             placeholder="输入你的想法，比如‘次卧平时不住人，希望能兼顾书房和收纳’"
           />
           <div className="flex items-center justify-between">
-            {error ? <p className="text-sm text-[#b7443b]">{error}</p> : <div />}
-            <Button type="submit" disabled={pending || !draft.trim()}>
+            {error ? (
+              <p className="text-sm text-[#b7443b]">{error}</p>
+            ) : completedTransition ? (
+              <p className="text-sm text-[var(--muted)]">设计师已整理完本轮沟通，正在为你准备下一步。</p>
+            ) : (
+              <div />
+            )}
+            <Button type="submit" disabled={isLocked || !draft.trim()}>
               <Send size={16} />
               发送回答
             </Button>
