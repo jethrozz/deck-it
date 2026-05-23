@@ -73,37 +73,46 @@ export function createProjectRepository(prisma: PrismaLike) {
 
     async consumeProjectCredit(projectId: string) {
       const allowedStatuses: ProjectStatus[] = ["PAYMENT_SUCCEEDED", "BRIEF_READY", "INTERVIEW_COMPLETE"];
-      const project = await prisma.project.findUnique({
-        where: { id: projectId },
-        select: {
-          status: true,
-          generationCreditsPurchased: true,
-          generationCreditsUsed: true
-        }
-      });
+      const maxAttempts = 3;
 
-      if (!project || !allowedStatuses.includes(project.status)) {
-        return false;
-      }
-
-      if (project.generationCreditsPurchased <= project.generationCreditsUsed) {
-        return false;
-      }
-
-      const result = await prisma.project.updateMany({
-        where: {
-          id: projectId,
-          status: { in: allowedStatuses },
-          generationCreditsUsed: project.generationCreditsUsed
-        },
-        data: {
-          generationCreditsUsed: {
-            increment: 1
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        const project = await prisma.project.findUnique({
+          where: { id: projectId },
+          select: {
+            status: true,
+            generationCreditsPurchased: true,
+            generationCreditsUsed: true
           }
-        }
-      });
+        });
 
-      return result.count === 1;
+        if (!project || !allowedStatuses.includes(project.status)) {
+          return false;
+        }
+
+        if (project.generationCreditsPurchased <= project.generationCreditsUsed) {
+          return false;
+        }
+
+        const result = await prisma.project.updateMany({
+          where: {
+            id: projectId,
+            status: { in: allowedStatuses },
+            generationCreditsUsed: project.generationCreditsUsed
+          },
+          data: {
+            generationCreditsUsed: {
+              increment: 1
+            }
+          }
+        });
+
+        if (result.count === 1) {
+          return true;
+        }
+      }
+
+      // Avoid returning a false "insufficient credit" result while credits still remain.
+      throw new Error("Credit consumption contention: retry required");
     },
 
     findOrderById(orderId: string) {
@@ -128,7 +137,7 @@ export function createProjectRepository(prisma: PrismaLike) {
       });
     },
 
-    createOrder(data: Prisma.OrderUncheckedCreateInput) {
+    createOrder(data: Prisma.OrderCreateInput) {
       return prisma.order.create({ data });
     },
 
@@ -145,7 +154,7 @@ export function createProjectRepository(prisma: PrismaLike) {
       });
     },
 
-    createCouponRedemption(data: Prisma.CouponRedemptionUncheckedCreateInput) {
+    createCouponRedemption(data: Prisma.CouponRedemptionCreateInput) {
       return prisma.couponRedemption.create({ data });
     },
 
