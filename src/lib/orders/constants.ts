@@ -1,0 +1,6 @@
+export const ORDER_BUNDLE_PRICE = 199;
+export const ORDER_BUNDLE_CREDITS = 2;
+export const XUNHUPAY_MIN_TEST_PAYMENT = 0.01;
+
+export const TEST_COUPON_DISCOUNT_RATE = 0.8;
+export const TEST_COUPON_MIN_PAYABLE = 0.01;
