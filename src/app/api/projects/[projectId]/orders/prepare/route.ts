@@ -1,0 +1,113 @@
+import { Prisma } from "@prisma/client";
+import { NextResponse } from "next/server";
+import { ensureBuiltInCoupons } from "@/lib/orders/bootstrap";
+import { ORDER_BUNDLE_CREDITS, ORDER_BUNDLE_PRICE } from "@/lib/orders/constants";
+import { prisma } from "@/lib/db";
+import { createProjectRepository } from "@/lib/repositories/project-repository";
+
+function toNumber(value: Prisma.Decimal | number) {
+  return typeof value === "number" ? value : Number(value.toString());
+}
+
+function formatOrder(order: {
+  id: string;
+  orderNo: string;
+  status: string;
+  title: string;
+  creditsGranted: number;
+  originalAmount: Prisma.Decimal;
+  discountAmount: Prisma.Decimal;
+  payableAmount: Prisma.Decimal;
+  contactType: string | null;
+  contactValue: string | null;
+  couponCodeSnapshot: string | null;
+}) {
+  return {
+    id: order.id,
+    orderNo: order.orderNo,
+    status: order.status,
+    title: order.title,
+    creditsGranted: order.creditsGranted,
+    originalAmount: toNumber(order.originalAmount),
+    discountAmount: toNumber(order.discountAmount),
+    payableAmount: toNumber(order.payableAmount),
+    contactType: order.contactType,
+    contactValue: order.contactValue,
+    couponCodeSnapshot: order.couponCodeSnapshot
+  };
+}
+
+function makeOrderNo(projectId: string) {
+  const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
+  return `ORD-${Date.now()}-${projectId.slice(0, 6).toUpperCase()}-${suffix}`;
+}
+
+function errorResponse(status: number, error: string) {
+  return NextResponse.json({ error }, { status });
+}
+
+export async function POST(_request: Request, context: { params: Promise<{ projectId: string }> }) {
+  const { projectId } = await context.params;
+
+  try {
+    await ensureBuiltInCoupons(prisma);
+
+    const repository = createProjectRepository(prisma);
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: {
+        id: true,
+        status: true,
+        generationCreditsPurchased: true,
+        generationCreditsUsed: true
+      }
+    });
+
+    if (!project) {
+      return errorResponse(404, "项目不存在");
+    }
+
+    const remainingCredits = Math.max(0, project.generationCreditsPurchased - project.generationCreditsUsed);
+    if (remainingCredits > 0) {
+      if (project.status !== "PAYMENT_SUCCEEDED") {
+        await repository.updateProjectStatus(projectId, "PAYMENT_SUCCEEDED");
+      }
+
+      return NextResponse.json({
+        order: null,
+        remainingCredits,
+        requiresPayment: false,
+        nextPath: `/projects/${projectId}/generating`
+      });
+    }
+
+    let order = await repository.findLatestOpenOrder(projectId);
+    if (!order) {
+      const originalAmount = new Prisma.Decimal(ORDER_BUNDLE_PRICE.toFixed(2));
+      order = await repository.createOrder({
+        project: { connect: { id: projectId } },
+        orderNo: makeOrderNo(projectId),
+        title: "设计方案生成次数包（2次）",
+        creditsGranted: ORDER_BUNDLE_CREDITS,
+        originalAmount,
+        discountAmount: new Prisma.Decimal("0.00"),
+        payableAmount: originalAmount,
+        status: "PENDING"
+      });
+    }
+
+    if (project.status !== "AWAITING_PAYMENT") {
+      await repository.updateProjectStatus(projectId, "AWAITING_PAYMENT");
+    }
+
+    return NextResponse.json({
+      order: formatOrder(order),
+      remainingCredits: 0,
+      requiresPayment: true,
+      nextPath: `/projects/${projectId}/payment`
+    });
+  } catch (error) {
+    console.error("Failed to prepare order", error);
+    return errorResponse(500, "订单准备失败，请稍后重试");
+  }
+}
