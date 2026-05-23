@@ -80,6 +80,31 @@ function normalizeStringArray(values: unknown): string[] {
     .filter((item): item is string => Boolean(item && item.length > 0));
 }
 
+function normalizeWhitespace(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function keepOnlyFirstQuestion(message: string): string {
+  const normalizedMessage = normalizeWhitespace(message);
+  const questionMarks = normalizedMessage.match(/[？?]/g) ?? [];
+
+  if (questionMarks.length <= 1) {
+    return normalizedMessage;
+  }
+
+  const segments = normalizedMessage.split(/(?<=[。！？!?])\s*/u).filter((segment) => segment.length > 0);
+  const keptSegments: string[] = [];
+
+  for (const segment of segments) {
+    keptSegments.push(segment);
+    if (/[？?]/.test(segment)) {
+      break;
+    }
+  }
+
+  return normalizeWhitespace(keptSegments.join(""));
+}
+
 function hasKeyword(haystack: string, keywords: string[]) {
   return keywords.some((keyword) => haystack.includes(keyword));
 }
@@ -574,11 +599,14 @@ export class DeepSeekTextClient {
   }
 
   async nextAgentTurn(input: AgentTurnInput): Promise<AgentTurnOutput> {
+    console.log("deepseek nextAgentTurn ");
     const raw = await this.chatJson({
       systemPrompt:
         [
           "你是装修设计师 Agent。",
-          "最多追问 12 个问题，但正常应尽量在 4-6 轮内完成需求澄清。",
+          "最多追问 12 轮，并且每轮只能问一个问题，但正常应尽量在 7 轮内完成需求澄清。",
+          "message 里最多只允许出现 1 个问号，不要在同一轮里夹带第二个问题，也不要在一个问题里同时确认两个不同维度。",
+          "如果还有别的问题要问，留到下一轮；本轮只保留当前最影响方案判断的那个问题。",
           "请先提出设计想法或需求探索问题，再根据用户回答继续推进。",
           "当你已经明确了公共区方向、关键卧室功能、阳台/卫浴等硬约束、以及用户最在意的生活需求后，应优先输出 complete，不要继续追问琐碎偏好。",
           "避免为了凑轮数继续追问；没有明显决策价值的问题不要再问。",
@@ -619,7 +647,14 @@ export class DeepSeekTextClient {
 
     const normalized = agentInterviewResponseSchema.safeParse(raw);
     if (normalized.success) {
-      return normalized.data;
+      if (normalized.data.type !== "designer_prompt") {
+        return normalized.data;
+      }
+
+      return {
+        ...normalized.data,
+        message: keepOnlyFirstQuestion(normalized.data.message)
+      };
     }
 
     const parsed = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
@@ -643,8 +678,10 @@ export class DeepSeekTextClient {
     return {
       type: parsed.type === "suggestion" ? "suggestion" : "designer_prompt",
       message:
-        asString(parsed.message) ??
-        "我已经看过户型和偏好。你们最希望优先改善哪个空间，客餐厅、主卧，还是次卧/书房？",
+        keepOnlyFirstQuestion(
+          asString(parsed.message) ??
+            "我已经看过户型和偏好。你们最希望优先改善哪个空间，客餐厅、主卧，还是次卧/书房？"
+        ),
       options:
         normalizedOptions.length > 0
           ? normalizedOptions

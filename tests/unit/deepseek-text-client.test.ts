@@ -66,6 +66,50 @@ describe("DeepSeekTextClient", () => {
     });
   });
 
+  it("keeps only one question in a designer prompt message", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  type: "designer_prompt",
+                  message:
+                    "我注意到客餐厅和阳台连在一起，公共区有做开放化的潜力。你们更想先保留餐桌区还是扩大客厅活动面？另外家里平时会不会在这里办公？",
+                  options: ["保留餐桌区", "扩大客厅活动面", "两者都要"],
+                  progress: { current: 2, max: 12 }
+                })
+              }
+            }
+          ]
+        })
+      })
+    );
+
+    const client = new DeepSeekTextClient({
+      apiKey: "deepseek-key",
+      baseUrl: "https://api.deepseek.com",
+      model: "deepseek-v4-pro"
+    });
+
+    const result = await client.nextAgentTurn({
+      analysis,
+      profile,
+      conversation: [{ role: "agent", content: "先确认家庭成员结构。" }]
+    });
+
+    expect(result).toEqual({
+      type: "designer_prompt",
+      message:
+        "我注意到客餐厅和阳台连在一起，公共区有做开放化的潜力。你们更想先保留餐桌区还是扩大客厅活动面？",
+      options: ["保留餐桌区", "扩大客厅活动面", "两者都要"],
+      progress: { current: 2, max: 12 }
+    });
+  });
+
   it("retries generic design plans and backfills rendering prompts during normalization", async () => {
     const fetchMock = vi
       .fn()

@@ -183,6 +183,7 @@ export class QwenVisionClient {
   constructor(private readonly config: QwenVisionConfig) {}
 
   async analyzeFloorPlan(input: VisionAnalysisInput): Promise<FloorPlanAnalysis> {
+    console.log("qwen analyzeFloorPlan ");
     const imageReference = input.imageDataUrl ?? input.imageUrl;
     const response = await postJson<ChatCompletionResponse>(
       buildChatUrl(this.config.baseUrl),

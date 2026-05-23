@@ -69,6 +69,19 @@ export function InterviewPanel({
     return parseAgentMetadata(latestAgentMessage?.metadataJson);
   }, [conversation]);
 
+  const latestProgressTurn = useMemo(() => {
+    const latestProgressMessage = [...conversation].reverse().find((item) => {
+      if (item.role !== "agent") {
+        return false;
+      }
+
+      const metadata = parseAgentMetadata(item.metadataJson);
+      return Boolean(metadata && "progress" in metadata);
+    });
+
+    return parseAgentMetadata(latestProgressMessage?.metadataJson);
+  }, [conversation]);
+
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [conversation, pending, completedTransition]);
@@ -166,7 +179,7 @@ export function InterviewPanel({
     }
   }
 
-  const progress = latestAgentTurn && "progress" in latestAgentTurn ? latestAgentTurn.progress : { current: 0, max: 12 };
+  const progress = latestProgressTurn && "progress" in latestProgressTurn ? latestProgressTurn.progress : { current: 0, max: 12 };
   const isLocked = pending || completedTransition !== null;
 
   return (

@@ -103,4 +103,51 @@ describe("InterviewPanel", () => {
       nextPath: "/generating"
     });
   });
+
+  it("keeps the latest tracked progress when revisiting after completion", () => {
+    Object.defineProperty(window.HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: vi.fn()
+    });
+
+    render(
+      React.createElement(InterviewPanel, {
+        projectId: "p2",
+        status: "BRIEF_READY",
+        analysis,
+        preference,
+        initialConversation: [
+          ...initialConversation,
+          {
+            id: "user-1",
+            role: "user",
+            content: "次卧更想兼顾办公和临时留宿。"
+          },
+          {
+            id: "agent-2",
+            role: "agent",
+            content: "明白了，我再确认一下收纳和动线重点。",
+            metadataJson: {
+              type: "suggestion" as const,
+              message: "明白了，我再确认一下收纳和动线重点。",
+              options: ["先做玄关收纳", "先看次卧布局"],
+              progress: { current: 5, max: 12 as const }
+            }
+          },
+          {
+            id: "agent-3",
+            role: "agent",
+            content: "好的，我已经整理完你的核心需求，接下来开始生成方案。",
+            metadataJson: {
+              type: "complete" as const,
+              summary: "好的，我已经整理完你的核心需求，接下来开始生成方案。",
+              nextPath: "/generating"
+            }
+          }
+        ]
+      })
+    );
+
+    expect(screen.getByText("5/12")).not.toBeNull();
+  });
 });
