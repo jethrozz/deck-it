@@ -58,9 +58,16 @@ export async function POST(_request: Request, context: { params: Promise<{ proje
     return NextResponse.json({ error: "当前项目状态不允许开始生成，请稍后刷新页面重试。" }, { status: 409 });
   }
 
+  let consumedCreditSnapshot: { usedAfter: number } | null = null;
+
   try {
-    const consumed = await repo.consumeProjectCredit(projectId);
-    if (!consumed) {
+    const consumeResult = await repo.consumeProjectCredit(projectId);
+    if (!consumeResult.consumed) {
+      if (consumeResult.reason === "exhausted") {
+        await repo.updateProjectStatus(projectId, "AWAITING_PAYMENT");
+        return paymentRequiredResponse(projectId);
+      }
+
       const latestProject = await prisma.project.findUnique({
         where: { id: projectId },
         select: {
@@ -88,6 +95,8 @@ export async function POST(_request: Request, context: { params: Promise<{ proje
 
       return NextResponse.json({ error: "当前项目正在处理生成任务，请稍后重试。" }, { status: 409 });
     }
+
+    consumedCreditSnapshot = { usedAfter: consumeResult.usedAfter };
   } catch (error) {
     if (error instanceof Error && error.message.includes("Credit consumption contention")) {
       return NextResponse.json({ error: "生成请求较多，请稍后重试。" }, { status: 409 });
@@ -182,21 +191,34 @@ export async function POST(_request: Request, context: { params: Promise<{ proje
       nextPath: `/projects/${projectId}/complete`
     });
   } catch (error) {
-    try {
-      await prisma.project.updateMany({
-        where: {
-          id: projectId,
-          generationCreditsUsed: { gt: 0 }
-        },
-        data: {
-          generationCreditsUsed: {
-            decrement: 1
+    if (consumedCreditSnapshot) {
+      try {
+        const compensation = await prisma.project.updateMany({
+          where: {
+            id: projectId,
+            generationCreditsUsed: consumedCreditSnapshot.usedAfter
           },
-          status: "PAYMENT_SUCCEEDED"
+          data: {
+            generationCreditsUsed: {
+              decrement: 1
+            },
+            status: "PAYMENT_SUCCEEDED"
+          }
+        });
+
+        if (compensation.count !== 1) {
+          console.warn("Generation credit compensation missed target snapshot", {
+            projectId,
+            usedAfter: consumedCreditSnapshot.usedAfter
+          });
         }
-      });
-    } catch {
-      // Best-effort compensation only.
+      } catch (compensationError) {
+        console.warn("Generation credit compensation failed", {
+          projectId,
+          usedAfter: consumedCreditSnapshot.usedAfter,
+          compensationError
+        });
+      }
     }
 
     console.error("Generation pipeline fatal error", error);

@@ -16,6 +16,10 @@ type PrismaLike = Pick<
   | "briefExport"
 >;
 
+export type ConsumeProjectCreditResult =
+  | { consumed: true; usedAfter: number }
+  | { consumed: false; reason: "ineligible" | "exhausted" };
+
 export function createProjectRepository(prisma: PrismaLike) {
   return {
     createProject(name: string) {
@@ -71,7 +75,7 @@ export function createProjectRepository(prisma: PrismaLike) {
       });
     },
 
-    async consumeProjectCredit(projectId: string) {
+    async consumeProjectCredit(projectId: string): Promise<ConsumeProjectCreditResult> {
       const allowedStatuses: ProjectStatus[] = ["PAYMENT_SUCCEEDED", "BRIEF_READY", "INTERVIEW_COMPLETE"];
       const maxAttempts = 3;
 
@@ -86,11 +90,11 @@ export function createProjectRepository(prisma: PrismaLike) {
         });
 
         if (!project || !allowedStatuses.includes(project.status)) {
-          return false;
+          return { consumed: false, reason: "ineligible" };
         }
 
         if (project.generationCreditsPurchased <= project.generationCreditsUsed) {
-          return false;
+          return { consumed: false, reason: "exhausted" };
         }
 
         const result = await prisma.project.updateMany({
@@ -107,7 +111,10 @@ export function createProjectRepository(prisma: PrismaLike) {
         });
 
         if (result.count === 1) {
-          return true;
+          return {
+            consumed: true,
+            usedAfter: project.generationCreditsUsed + 1
+          };
         }
       }
 

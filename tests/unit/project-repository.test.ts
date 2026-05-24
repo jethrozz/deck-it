@@ -120,7 +120,7 @@ describe("project repository", () => {
     const repo = createProjectRepository(prisma as never);
     const consumed = await repo.consumeProjectCredit("p1");
 
-    expect(consumed).toBe(true);
+    expect(consumed).toEqual({ consumed: true, usedAfter: 1 });
     expect(prisma.project.updateMany).toHaveBeenCalledWith({
       where: {
         id: "p1",
@@ -150,7 +150,7 @@ describe("project repository", () => {
     const repo = createProjectRepository(prisma as never);
     const consumed = await repo.consumeProjectCredit("p1");
 
-    expect(consumed).toBe(false);
+    expect(consumed).toEqual({ consumed: false, reason: "exhausted" });
     expect(prisma.project.updateMany).not.toHaveBeenCalled();
   });
 
@@ -169,7 +169,7 @@ describe("project repository", () => {
     const repo = createProjectRepository(prisma as never);
     const consumed = await repo.consumeProjectCredit("p1");
 
-    expect(consumed).toBe(false);
+    expect(consumed).toEqual({ consumed: false, reason: "ineligible" });
     expect(prisma.project.updateMany).not.toHaveBeenCalled();
   });
 
@@ -195,7 +195,7 @@ describe("project repository", () => {
     const repo = createProjectRepository(prisma as never);
     const consumed = await repo.consumeProjectCredit("p1");
 
-    expect(consumed).toBe(true);
+    expect(consumed).toEqual({ consumed: true, usedAfter: 2 });
     expect(prisma.project.updateMany).toHaveBeenCalledTimes(2);
   });
 });
