@@ -97,10 +97,14 @@ async function readError(response: Response) {
   return text;
 }
 
-function formatMoney(value: number) {
-  return `¥${value.toFixed(2)}`;
+function formatMoney(value: number | string | undefined | null) {
+  const num = typeof value === 'number' ? value : parseFloat(String(value));
+  // 处理 NaN 或无效值
+  if (isNaN(num)) {
+    return '¥6.90';
+  }
+  return `¥${num.toFixed(2)}`;
 }
-
 const NON_PAYABLE_STATUSES = new Set(["PAID", "FAILED", "EXPIRED", "CANCELED"]);
 
 function isOrderStatusNonPayable(status: string | undefined) {

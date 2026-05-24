@@ -10,12 +10,14 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "db:check": "node scripts/check-db-connection.mjs",
+    "db:inventory": "node scripts/db-migration-inventory.mjs",
     "prisma:generate": "prisma generate",
+    "prisma:push": "prisma db push",
     "prisma:migrate": "prisma migrate dev"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
-    "bullmq": "^5.21.2",
     "lucide-react": "^0.468.0",
     "next": "^15.0.3",
     "playwright": "^1.49.0",
