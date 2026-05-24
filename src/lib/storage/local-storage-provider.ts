@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { StorageProvider, StoredFile } from "@/lib/storage/storage-provider";
+import { getUploadRootDir } from "@/lib/storage/upload-root";
 
 function safeFileName(fileName: string) {
   return fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -10,14 +11,12 @@ export class LocalStorageProvider implements StorageProvider {
   private readonly rootDir: string;
 
   constructor() {
-    // 在 Vercel 生产环境中使用 /tmp，本地开发仍用 process.cwd()
-    const isVercel = process.env.VERCEL === '1';
-    const baseDir = isVercel ? '/tmp' : process.cwd();
-    this.rootDir = path.join(baseDir, '.data', 'uploads');
-    
+    this.rootDir = getUploadRootDir();
+
     // 确保目录存在（运行时创建）
     this.ensureDirectory();
   }
+
   private ensureDirectory() {
     mkdir(this.rootDir, { recursive: true });
   }
