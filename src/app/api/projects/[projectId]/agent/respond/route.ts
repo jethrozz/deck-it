@@ -46,7 +46,10 @@ export async function POST(request: Request, context: { params: Promise<{ projec
   if (result.type === "complete") {
     await repo.addConversationMessage(projectId, "agent", result.summary, result);
     await repo.updateProjectStatus(projectId, "INTERVIEW_COMPLETE");
-    return NextResponse.json(result);
+    return NextResponse.json({
+      ...result,
+      nextPath: `/projects/${projectId}/payment`
+    });
   }
 
   await repo.addConversationMessage(projectId, "agent", result.message, result);
