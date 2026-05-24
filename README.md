@@ -38,6 +38,42 @@ npm run dev
 
 The default `AI_PROVIDER=mock` runs the full flow without external model credentials.
 
+## Payment Configuration (XunhuPay)
+
+Set these environment variables before enabling real payment:
+
+- `NEXT_PUBLIC_APP_URL` (used to build default return URL)
+- `XUNHUPAY_APP_ID`
+- `XUNHUPAY_APP_SECRET`
+- `XUNHUPAY_NOTIFY_URL` (must point to `/api/payments/xunhupay/notify`)
+- `XUNHUPAY_RETURN_URL` (optional, defaults to project payment page)
+- `XUNHUPAY_PAYMENT_URL` (optional, defaults to `https://api.xunhupay.com/payment/do.html`)
+- `XUNHUPAY_PLUGIN` (optional payment channel/plugin passthrough)
+
+Order bundle defaults in current implementation:
+
+- `ORDER_BUNDLE_PRICE=199`
+- `ORDER_BUNDLE_CREDITS=2`
+
+These defaults are currently defined in `src/lib/orders/constants.ts`; `.env.example` keeps the same values for operations documentation.
+
+## Payment Behavior Notes
+
+- Interview completion no longer enters generation directly. It first enters `/projects/{projectId}/payment`.
+- Payment success unlocks generation credits; each successful bundle purchase grants `2` credits.
+- Starting generation consumes `1` credit per attempt.
+- Re-entering interview and then starting generation also consumes `1` credit.
+- When credits are exhausted, generate/regenerate routes return `requiresPayment=true` and `nextPath=/projects/{projectId}/payment`.
+
+### Built-in Test Coupon (Whitelist + 0.01 payment)
+
+The app supports an internal test coupon bootstrap:
+
+- `TEST_COUPON_CODE`: built-in coupon code
+- `TEST_COUPON_ALLOWED_CONTACTS`: comma-separated email/phone whitelist
+
+When this coupon is valid for the submitted contact identity, pricing is forced to a minimum payable amount (`0.01`) so you can test the real payment callback path without paying full amount.
+
 ## AI Provider Configuration
 
 For the new multi-provider routing, set:
