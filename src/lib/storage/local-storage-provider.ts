@@ -7,7 +7,20 @@ function safeFileName(fileName: string) {
 }
 
 export class LocalStorageProvider implements StorageProvider {
-  constructor(private readonly rootDir = path.join(process.cwd(), ".data", "uploads")) {}
+  private readonly rootDir: string;
+
+  constructor() {
+    // 在 Vercel 生产环境中使用 /tmp，本地开发仍用 process.cwd()
+    const isVercel = process.env.VERCEL === '1';
+    const baseDir = isVercel ? '/tmp' : process.cwd();
+    this.rootDir = path.join(baseDir, '.data', 'uploads');
+    
+    // 确保目录存在（运行时创建）
+    this.ensureDirectory();
+  }
+  private ensureDirectory() {
+    mkdir(this.rootDir, { recursive: true });
+  }
 
   async saveProjectFile(input: {
     projectId: string;
