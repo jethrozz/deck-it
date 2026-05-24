@@ -100,7 +100,7 @@ describe("InterviewPanel", () => {
       projectId: "p1",
       from: "interview",
       to: "generating",
-      nextPath: "/generating"
+      nextPath: "/projects/p1/payment"
     });
   });
 

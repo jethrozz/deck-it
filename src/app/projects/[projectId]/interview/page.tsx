@@ -17,6 +17,15 @@ export default async function InterviewPage({ params }: { params: Promise<{ proj
     redirect(getProjectRoute(project.id, project.status));
   }
 
+  if (
+    project.status === "INTERVIEW_COMPLETE" ||
+    project.status === "AWAITING_PAYMENT" ||
+    project.status === "PAYMENT_PROCESSING" ||
+    project.status === "PAYMENT_SUCCEEDED"
+  ) {
+    redirect(`/projects/${project.id}/payment`);
+  }
+
   const canonicalRoute = getProjectRoute(project.id, project.status);
   const allowRevisit = project.status === "BRIEF_READY";
   if (!allowRevisit && canonicalRoute !== `/projects/${project.id}/interview`) {

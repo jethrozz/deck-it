@@ -7,6 +7,7 @@ export async function getProjectDetail(projectId: string) {
       analysis: true,
       preference: true,
       conversations: { orderBy: { createdAt: "asc" } },
+      orders: { orderBy: { createdAt: "desc" }, take: 1 },
       designPlan: true,
       renderings: { orderBy: { createdAt: "asc" } },
       briefExports: { orderBy: { createdAt: "desc" } }

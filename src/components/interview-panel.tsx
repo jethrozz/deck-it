@@ -158,7 +158,7 @@ export function InterviewPanel({
             metadataJson: payload
           }
         ]);
-        setCompletedTransition({ nextPath: payload.nextPath });
+        setCompletedTransition({ nextPath: `/projects/${projectId}/payment` });
         return;
       }
 
