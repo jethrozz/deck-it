@@ -26,7 +26,7 @@ type WorkspaceProject = {
 
 type AgentResult =
   | { type: "question"; question: { id: string; question: string; recommendation?: string; options: string[] } }
-  | { type: "complete"; reason: string };
+  | { type: "complete"; reason: string; nextPath?: string };
 
 type ProjectWorkspaceProps = {
   project: WorkspaceProject;
@@ -299,6 +299,10 @@ export function ProjectWorkspace({ project }: ProjectWorkspaceProps) {
                   setStatus("INTERVIEWING");
                 } else {
                   setStatus("INTERVIEW_COMPLETE");
+                  if (response.nextPath) {
+                    window.location.assign(response.nextPath);
+                    return;
+                  }
                 }
 
                 setAgentResult(response);
@@ -336,6 +340,9 @@ export function ProjectWorkspace({ project }: ProjectWorkspaceProps) {
                         }
                       ]);
                       setStatus("INTERVIEWING");
+                    } else if (response.nextPath) {
+                      window.location.assign(response.nextPath);
+                      return;
                     }
 
                     setAgentResult(response);

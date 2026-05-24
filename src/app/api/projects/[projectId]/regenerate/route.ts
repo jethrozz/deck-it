@@ -25,9 +25,13 @@ export async function POST(_request: Request, context: { params: Promise<{ proje
       await repository.updateProjectStatus(projectId, "AWAITING_PAYMENT");
     }
 
-    return NextResponse.json({
-      nextPath: `/projects/${projectId}/payment`
-    });
+    return NextResponse.json(
+      {
+        nextPath: `/projects/${projectId}/payment`,
+        requiresPayment: true
+      },
+      { status: 402 }
+    );
   }
 
   await repository.resetGeneratedOutputs(projectId);

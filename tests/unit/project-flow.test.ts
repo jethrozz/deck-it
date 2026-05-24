@@ -19,7 +19,7 @@ describe("project flow", () => {
     expect(getProjectRoute(projectId, "ANALYSIS_CONFIRMED")).toBe("/projects/p1/preferences");
     expect(getProjectRoute(projectId, "PREFERENCES_COLLECTED")).toBe("/projects/p1/interview");
     expect(getProjectRoute(projectId, "INTERVIEWING")).toBe("/projects/p1/interview");
-    expect(getProjectRoute(projectId, "INTERVIEW_COMPLETE")).toBe("/projects/p1/generating");
+    expect(getProjectRoute(projectId, "INTERVIEW_COMPLETE")).toBe("/projects/p1/payment");
     expect(getProjectRoute(projectId, "AWAITING_PAYMENT")).toBe("/projects/p1/payment");
     expect(getProjectRoute(projectId, "PAYMENT_PROCESSING")).toBe("/projects/p1/payment");
     expect(getProjectRoute(projectId, "PAYMENT_SUCCEEDED")).toBe("/projects/p1/payment");
@@ -53,10 +53,10 @@ describe("project flow", () => {
     expect(getProjectStep("BRIEF_READY").key).toBe("complete");
   });
 
-  it("keeps interview-complete on generating step so credit is only consumed by real generate calls", () => {
+  it("routes interview-complete through payment gate while keeping the generating step", () => {
     const projectId = "p1";
 
-    expect(getProjectRoute(projectId, "INTERVIEW_COMPLETE")).toBe("/projects/p1/generating");
+    expect(getProjectRoute(projectId, "INTERVIEW_COMPLETE")).toBe("/projects/p1/payment");
     expect(getProjectStep("INTERVIEW_COMPLETE").key).toBe("generating");
   });
 

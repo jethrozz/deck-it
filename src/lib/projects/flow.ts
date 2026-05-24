@@ -100,7 +100,12 @@ export function getProjectRoute(projectId: string, status: ProjectStatus) {
     return `/projects/${projectId}/analysis/loading`;
   }
 
-  if (status === "AWAITING_PAYMENT" || status === "PAYMENT_PROCESSING" || status === "PAYMENT_SUCCEEDED") {
+  if (
+    status === "INTERVIEW_COMPLETE" ||
+    status === "AWAITING_PAYMENT" ||
+    status === "PAYMENT_PROCESSING" ||
+    status === "PAYMENT_SUCCEEDED"
+  ) {
     return `/projects/${projectId}/payment`;
   }
 
