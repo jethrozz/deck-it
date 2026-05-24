@@ -1,13 +1,25 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { StorageProvider, StoredFile } from "@/lib/storage/storage-provider";
+import { getUploadRootDir } from "@/lib/storage/upload-root";
 
 function safeFileName(fileName: string) {
   return fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
 export class LocalStorageProvider implements StorageProvider {
-  constructor(private readonly rootDir = path.join(process.cwd(), ".data", "uploads")) {}
+  private readonly rootDir: string;
+
+  constructor() {
+    this.rootDir = getUploadRootDir();
+
+    // 确保目录存在（运行时创建）
+    this.ensureDirectory();
+  }
+
+  private ensureDirectory() {
+    mkdir(this.rootDir, { recursive: true });
+  }
 
   async saveProjectFile(input: {
     projectId: string;

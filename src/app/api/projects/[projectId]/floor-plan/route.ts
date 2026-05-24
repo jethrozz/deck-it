@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { createAiProvider } from "@/lib/ai/provider-factory";
 import { prisma } from "@/lib/db";
 import { createProjectRepository } from "@/lib/repositories/project-repository";
-import { createStorageProvider } from "@/lib/storage/provider-factory";
 
 export async function POST(request: Request, context: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await context.params;
@@ -16,26 +15,20 @@ export async function POST(request: Request, context: { params: Promise<{ projec
   const bytes = new Uint8Array(await file.arrayBuffer());
   const mimeType = file.type || "image/png";
   const imageDataUrl = `data:${mimeType};base64,${Buffer.from(bytes).toString("base64")}`;
-  const stored = await createStorageProvider().saveProjectFile({
-    projectId,
-    fileName: file.name,
-    contentType: mimeType,
-    bytes
-  });
 
   const provider = createAiProvider();
   const repo = createProjectRepository(prisma);
   await repo.updateProjectStatus(projectId, "FLOOR_PLAN_ANALYZING");
   const analysis = await provider.analyzeFloorPlan({
-    imageUrl: stored.url,
+    imageUrl: imageDataUrl,
     imageDataUrl
   });
 
-  await repo.saveFloorPlanUrl(projectId, stored.url);
+  await repo.saveFloorPlanUrl(projectId, imageDataUrl);
   await repo.saveFloorPlanAnalysis(projectId, analysis, false);
 
   return NextResponse.json({
-    imageUrl: stored.url,
+    imageUrl: imageDataUrl,
     analysis,
     nextPath: `/projects/${projectId}/analysis`
   });

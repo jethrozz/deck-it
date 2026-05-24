@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
+import { getUploadRootDir } from "@/lib/storage/upload-root";
 
 function getContentType(fileName: string) {
   const extension = path.extname(fileName).toLowerCase();
@@ -23,7 +24,7 @@ export async function GET(
   context: { params: Promise<{ projectId: string; fileName: string }> }
 ) {
   const { projectId, fileName } = await context.params;
-  const filePath = path.join(process.cwd(), ".data", "uploads", projectId, fileName);
+  const filePath = path.join(getUploadRootDir(), projectId, fileName);
 
   try {
     const file = await readFile(filePath);
