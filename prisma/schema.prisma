@@ -1,0 +1,196 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Project {
+  id                         String              @id @default(cuid())
+  name                       String
+  status                     ProjectStatus       @default(CREATED)
+  floorPlanUrl               String?
+  generationCreditsPurchased Int                 @default(0)
+  generationCreditsUsed      Int                 @default(0)
+  createdAt                  DateTime            @default(now())
+  updatedAt                  DateTime            @updatedAt
+  analysis                   FloorPlanAnalysis?
+  preference                 PreferenceProfile?
+  conversations              AgentConversation[]
+  designPlan                 DesignPlan?
+  renderings                 RenderingAsset[]
+  briefExports               BriefExport[]
+  orders                     Order[]
+}
+
+model FloorPlanAnalysis {
+  id           String   @id @default(cuid())
+  projectId    String   @unique
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  analysisJson Json
+  confirmed    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model PreferenceProfile {
+  id          String   @id @default(cuid())
+  projectId   String   @unique
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  profileJson Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AgentConversation {
+  id           String   @id @default(cuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  role         String
+  content      String
+  metadataJson Json?
+  createdAt    DateTime @default(now())
+}
+
+model DesignPlan {
+  id        String   @id @default(cuid())
+  projectId String   @unique
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  planJson  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RenderingAsset {
+  id           String      @id @default(cuid())
+  projectId    String
+  project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  spaceType    String
+  prompt       String
+  imageUrl     String?
+  status       AssetStatus @default(PENDING)
+  errorMessage String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model BriefExport {
+  id           String      @id @default(cuid())
+  projectId    String
+  project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fileUrl      String?
+  status       AssetStatus @default(PENDING)
+  version      Int         @default(1)
+  errorMessage String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model Order {
+  id                   String           @id @default(cuid())
+  projectId            String
+  project              Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  orderNo              String           @unique
+  provider             PaymentProvider  @default(XUNHUPAY)
+  providerOrderNo      String?
+  title                String
+  packageType          OrderPackageType @default(GENERATION_BUNDLE)
+  creditsGranted       Int
+  originalAmount       Decimal          @db.Decimal(10, 2)
+  discountAmount       Decimal          @db.Decimal(10, 2)
+  payableAmount        Decimal          @db.Decimal(10, 2)
+  status               OrderStatus      @default(PENDING)
+  contactType          ContactType?
+  contactValue         String?
+  couponId             String?
+  coupon               Coupon?          @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  couponCodeSnapshot   String?
+  discountRateSnapshot Decimal?         @db.Decimal(5, 2)
+  paidAt               DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  redemption CouponRedemption?
+
+  @@index([projectId, status])
+}
+
+model Coupon {
+  id                   String             @id @default(cuid())
+  code                 String             @unique
+  discountRate         Decimal            @db.Decimal(5, 2)
+  isActive             Boolean            @default(true)
+  isTest               Boolean            @default(false)
+  allowedContactValues Json?
+  minPayableAmount     Decimal?           @db.Decimal(10, 2)
+  redemptions          CouponRedemption[]
+  orders               Order[]
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+}
+
+model CouponRedemption {
+  id           String      @id @default(cuid())
+  couponId     String
+  coupon       Coupon      @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  orderId      String      @unique
+  order        Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  contactType  ContactType
+  contactValue String
+  createdAt    DateTime    @default(now())
+
+  @@unique([couponId, contactType, contactValue])
+}
+
+enum ProjectStatus {
+  CREATED
+  FLOOR_PLAN_UPLOADING
+  FLOOR_PLAN_ANALYZING
+  FLOOR_PLAN_ANALYZED
+  ANALYSIS_CONFIRMED
+  PREFERENCES_COLLECTED
+  INTERVIEWING
+  INTERVIEW_COMPLETE
+  AWAITING_PAYMENT
+  PAYMENT_PROCESSING
+  PAYMENT_SUCCEEDED
+  GENERATING_REQUIREMENT_PROFILE
+  GENERATING_PLAN
+  PLAN_READY
+  GENERATING_RENDERINGS
+  RENDERINGS_READY
+  GENERATING_BRIEF
+  BRIEF_READY
+}
+
+enum AssetStatus {
+  PENDING
+  RUNNING
+  READY
+  FAILED
+}
+
+enum PaymentProvider {
+  XUNHUPAY
+}
+
+enum OrderPackageType {
+  GENERATION_BUNDLE
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+  EXPIRED
+  CANCELED
+}
+
+enum ContactType {
+  EMAIL
+  PHONE
+}
