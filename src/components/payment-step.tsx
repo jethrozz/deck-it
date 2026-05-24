@@ -1,7 +1,7 @@
 "use client";
 
 import { LoaderCircle, RefreshCcw } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { Button, FieldInput, Surface } from "@/components/ui/primitives";
 
@@ -101,6 +101,16 @@ function formatMoney(value: number) {
   return `¥${value.toFixed(2)}`;
 }
 
+const NON_PAYABLE_STATUSES = new Set(["PAID", "FAILED", "EXPIRED", "CANCELED", "PROCESSING"]);
+
+function isOrderStatusNonPayable(status: string | undefined) {
+  if (!status) {
+    return true;
+  }
+
+  return NON_PAYABLE_STATUSES.has(status);
+}
+
 function submitPaymentForm(payment: PayResponse["payment"]) {
   if (payment.method !== "POST") {
     throw new Error("暂不支持当前支付请求方式");
@@ -158,8 +168,17 @@ export function PaymentStep({ project }: { project: PaymentProjectSnapshot }) {
   const [refreshing, setRefreshing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const isMountedRef = useRef(true);
 
-  const canStartGenerate = remainingCredits > 0 || order?.status === "PAID" || projectStatus === "PAYMENT_SUCCEEDED";
+  const canStartGenerate = remainingCredits > 0;
+  const payDisabled = !order || preparing || quoting || paying || isOrderStatusNonPayable(order.status);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const pricing = useMemo(() => {
     if (quote) {
@@ -191,6 +210,10 @@ export function PaymentStep({ project }: { project: PaymentProjectSnapshot }) {
       }
 
       const payload = (await response.json()) as CurrentResponse;
+      if (!isMountedRef.current) {
+        return;
+      }
+
       setProjectStatus(payload.projectStatus);
       setRemainingCredits(payload.remainingCredits);
       setOrder(payload.order);
@@ -201,15 +224,15 @@ export function PaymentStep({ project }: { project: PaymentProjectSnapshot }) {
         setCouponCode(payload.order.couponCodeSnapshot);
       }
 
-      if (payload.remainingCredits > 0 || payload.order?.status === "PAID") {
+      if (payload.remainingCredits > 0) {
         setNotice("支付已完成，已可进入生成流程。");
       }
     } catch (requestError) {
-      if (!silent) {
+      if (!silent && isMountedRef.current) {
         setError(getErrorMessage(requestError));
       }
     } finally {
-      if (!silent) {
+      if (!silent && isMountedRef.current) {
         setRefreshing(false);
       }
     }
@@ -229,7 +252,7 @@ export function PaymentStep({ project }: { project: PaymentProjectSnapshot }) {
         }
 
         const payload = (await response.json()) as PrepareResponse;
-        if (!mounted) {
+        if (!mounted || !isMountedRef.current) {
           return;
         }
 
@@ -247,11 +270,11 @@ export function PaymentStep({ project }: { project: PaymentProjectSnapshot }) {
           setNotice("当前项目已有可用生成次数，点击下方按钮即可开始生成。");
         }
       } catch (requestError) {
-        if (mounted) {
+        if (mounted && isMountedRef.current) {
           setError(getErrorMessage(requestError));
         }
       } finally {
-        if (mounted) {
+        if (mounted && isMountedRef.current) {
           setPreparing(false);
         }
       }
@@ -322,6 +345,11 @@ export function PaymentStep({ project }: { project: PaymentProjectSnapshot }) {
   async function handlePay() {
     if (!order) {
       setError("订单尚未准备好，请稍后重试。");
+      return;
+    }
+
+    if (isOrderStatusNonPayable(order.status)) {
+      setError("订单状态不允许支付");
       return;
     }
 
@@ -464,7 +492,7 @@ export function PaymentStep({ project }: { project: PaymentProjectSnapshot }) {
             </Button>
             <Button
               type="button"
-              disabled={!order || paying || quoting || preparing || order.status === "PROCESSING"}
+              disabled={payDisabled}
               onClick={() => void handlePay()}
             >
               {paying ? <LoaderCircle size={16} className="animate-spin" /> : null}
