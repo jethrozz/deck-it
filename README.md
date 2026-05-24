@@ -50,12 +50,10 @@ Set these environment variables before enabling real payment:
 - `XUNHUPAY_PAYMENT_URL` (optional, defaults to `https://api.xunhupay.com/payment/do.html`)
 - `XUNHUPAY_PLUGIN` (optional payment channel/plugin passthrough)
 
-Order bundle defaults in current implementation:
+Order bundle pricing is currently **not env-configurable**. It is hardcoded in `src/lib/orders/constants.ts`:
 
-- `ORDER_BUNDLE_PRICE=199`
-- `ORDER_BUNDLE_CREDITS=2`
-
-These defaults are currently defined in `src/lib/orders/constants.ts`; `.env.example` keeps the same values for operations documentation.
+- `ORDER_BUNDLE_PRICE = 199`
+- `ORDER_BUNDLE_CREDITS = 2`
 
 ## Payment Behavior Notes
 

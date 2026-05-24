@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { APIRequestContext, APIResponse } from "@playwright/test";
+import { PrismaClient, ProjectStatus } from "@prisma/client";
 
 const onePixelPng = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4////fwAJ+wP9KobjigAAAABJRU5ErkJggg==",
@@ -9,6 +10,17 @@ const onePixelPng = Buffer.from(
 type AgentTurn =
   | { type: "designer_prompt" | "suggestion"; options?: string[]; recommendation?: string }
   | { type: "complete"; nextPath: string; summary: string };
+
+const prisma = new PrismaClient();
+const DEFAULT_MAX_INTERVIEW_TURNS = 24;
+
+function resolveMaxInterviewTurns() {
+  const raw = Number(process.env.E2E_MAX_INTERVIEW_TURNS ?? DEFAULT_MAX_INTERVIEW_TURNS);
+  if (!Number.isFinite(raw) || raw < 1) {
+    return DEFAULT_MAX_INTERVIEW_TURNS;
+  }
+  return Math.floor(raw);
+}
 
 async function expectOk(response: APIResponse, context: string) {
   if (response.ok()) {
@@ -72,7 +84,9 @@ async function completeInterview(request: APIRequestContext, projectId: string) 
 
   let turn = (await startResponse.json()) as AgentTurn;
 
-  for (let attempt = 0; attempt < 12; attempt += 1) {
+  const maxTurns = resolveMaxInterviewTurns();
+
+  for (let attempt = 0; attempt < maxTurns; attempt += 1) {
     if (turn.type === "complete") {
       return turn;
     }
@@ -90,7 +104,7 @@ async function completeInterview(request: APIRequestContext, projectId: string) 
     turn = (await answerResponse.json()) as AgentTurn;
   }
 
-  throw new Error("Interview did not complete within 12 turns");
+  throw new Error(`Interview did not complete within ${maxTurns} turns`);
 }
 
 async function createInterviewCompleteProject(request: APIRequestContext, namePrefix: string) {
@@ -100,6 +114,26 @@ async function createInterviewCompleteProject(request: APIRequestContext, namePr
   expect(completed.type).toBe("complete");
   return projectId;
 }
+
+async function setProjectCredits(
+  projectId: string,
+  purchased: number,
+  used: number,
+  status: ProjectStatus = "BRIEF_READY"
+) {
+  await prisma.project.update({
+    where: { id: projectId },
+    data: {
+      generationCreditsPurchased: purchased,
+      generationCreditsUsed: used,
+      status
+    }
+  });
+}
+
+test.afterAll(async () => {
+  await prisma.$disconnect();
+});
 
 test("generation is gated by payment and leads to payment page", async ({ page, request }) => {
   test.setTimeout(120000);
@@ -120,6 +154,11 @@ test("generation is gated by payment and leads to payment page", async ({ page, 
   await expect(page.getByRole("heading", { name: "订单支付" })).toBeVisible();
   await expect(page.getByText("完成支付后解锁 2 次生成额度")).toBeVisible();
   await expect(page.getByRole("button", { name: "立即支付" })).toBeVisible();
+  await expect(page.getByText(/ORD-\d+-/)).toBeVisible();
+  await expect(page.getByText("PENDING")).toBeVisible();
+
+  const payableSummary = page.locator("div").filter({ hasText: "应付金额" }).first();
+  await expect(payableSummary).toContainText("¥199.00");
 });
 
 test("regenerate returns repurchase path when credits are exhausted", async ({ request }) => {
@@ -127,6 +166,17 @@ test("regenerate returns repurchase path when credits are exhausted", async ({ r
 
   const projectId = await createInterviewCompleteProject(request, "e2e-repurchase");
 
+  await setProjectCredits(projectId, 2, 0, "BRIEF_READY");
+  const regenerateWithCredits = await request.post(`/api/projects/${projectId}/regenerate`);
+  expect(regenerateWithCredits.status()).toBe(200);
+  const regenerateWithCreditsPayload = (await regenerateWithCredits.json()) as {
+    requiresPayment?: boolean;
+    nextPath?: string;
+  };
+  expect(regenerateWithCreditsPayload.requiresPayment).not.toBe(true);
+  expect(regenerateWithCreditsPayload.nextPath).toBe(`/projects/${projectId}/generating`);
+
+  await setProjectCredits(projectId, 2, 2, "BRIEF_READY");
   const regenerateResponse = await request.post(`/api/projects/${projectId}/regenerate`);
   expect(regenerateResponse.status()).toBe(402);
   const regeneratePayload = (await regenerateResponse.json()) as {
