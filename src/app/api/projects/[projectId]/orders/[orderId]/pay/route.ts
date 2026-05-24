@@ -120,18 +120,13 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     await ensureBuiltInCoupons(prisma);
 
     const repository = createProjectRepository(prisma);
-    const orderService = createOrderService(prisma);
-    const quote = await orderService.quoteOrder({
-      projectId,
-      orderId,
-      email: bodyResult.data.email,
-      phone: bodyResult.data.phone,
-      couponCode: bodyResult.data.couponCode
-    });
-
     const order = await repository.findOrderById(orderId);
     if (!order || order.projectId !== projectId) {
       return errorResponse(404, "订单不存在");
+    }
+
+    if (order.status === "PROCESSING") {
+      return errorResponse(409, "订单支付处理中，请勿重复发起");
     }
 
     if (order.status === "PAID") {
@@ -142,6 +137,15 @@ export async function POST(request: Request, context: { params: Promise<{ projec
       return errorResponse(409, "订单状态不允许支付");
     }
 
+    const orderService = createOrderService(prisma);
+    const quote = await orderService.quoteOrder({
+      projectId,
+      orderId,
+      email: bodyResult.data.email,
+      phone: bodyResult.data.phone,
+      couponCode: bodyResult.data.couponCode
+    });
+
     const couponRate = quote.coupon
       ? await prisma.coupon.findUnique({
           where: { id: quote.coupon.id },
@@ -149,17 +153,42 @@ export async function POST(request: Request, context: { params: Promise<{ projec
         })
       : null;
 
-    const updated = await repository.updateOrder(order.id, {
-      status: "PROCESSING",
-      contactType: toContactType(quote.contact.type),
-      contactValue: quote.contact.value,
-      originalAmount: new Prisma.Decimal(quote.pricing.originalAmount.toFixed(2)),
-      discountAmount: new Prisma.Decimal(quote.pricing.discountAmount.toFixed(2)),
-      payableAmount: new Prisma.Decimal(quote.pricing.payableAmount.toFixed(2)),
-      couponCodeSnapshot: quote.coupon?.code ?? null,
-      discountRateSnapshot: couponRate?.discountRate ?? null,
-      coupon: quote.coupon ? { connect: { id: quote.coupon.id } } : { disconnect: true }
+    const updateResult = await prisma.order.updateMany({
+      where: {
+        id: order.id,
+        status: "PENDING"
+      },
+      data: {
+        status: "PROCESSING",
+        contactType: toContactType(quote.contact.type),
+        contactValue: quote.contact.value,
+        originalAmount: new Prisma.Decimal(quote.pricing.originalAmount.toFixed(2)),
+        discountAmount: new Prisma.Decimal(quote.pricing.discountAmount.toFixed(2)),
+        payableAmount: new Prisma.Decimal(quote.pricing.payableAmount.toFixed(2)),
+        couponCodeSnapshot: quote.coupon?.code ?? null,
+        discountRateSnapshot: couponRate?.discountRate ?? null,
+        couponId: quote.coupon?.id ?? null
+      }
     });
+
+    if (updateResult.count === 0) {
+      const latestOrder = await repository.findOrderById(order.id);
+      if (!latestOrder) {
+        return errorResponse(404, "订单不存在");
+      }
+      if (latestOrder.status === "PROCESSING") {
+        return errorResponse(409, "订单支付处理中，请勿重复发起");
+      }
+      if (latestOrder.status === "PAID") {
+        return errorResponse(409, "订单已支付");
+      }
+      return errorResponse(409, "订单状态不允许支付");
+    }
+
+    const updated = await repository.findOrderById(order.id);
+    if (!updated) {
+      return errorResponse(404, "订单不存在");
+    }
 
     await repository.updateProjectStatus(projectId, "PAYMENT_PROCESSING");
 

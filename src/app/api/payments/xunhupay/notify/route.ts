@@ -11,6 +11,15 @@ function successResponse() {
   });
 }
 
+function failResponse() {
+  return new Response("fail", {
+    status: 500,
+    headers: {
+      "content-type": "text/plain; charset=utf-8"
+    }
+  });
+}
+
 function readString(value: FormDataEntryValue | null | undefined) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -48,6 +57,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Failed to settle XunhuPay callback", error);
+    return failResponse();
   }
 
   return successResponse();

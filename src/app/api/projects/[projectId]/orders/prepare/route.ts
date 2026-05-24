@@ -42,6 +42,38 @@ function makeOrderNo(projectId: string) {
   return `ORD-${Date.now()}-${projectId.slice(0, 6).toUpperCase()}-${suffix}`;
 }
 
+async function getOrCreateOpenOrder(projectId: string) {
+  const repository = createProjectRepository(prisma);
+
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const txRepository = createProjectRepository(tx as never);
+      const existing = await txRepository.findLatestOpenOrder(projectId);
+      if (existing) {
+        return existing;
+      }
+
+      const originalAmount = new Prisma.Decimal(ORDER_BUNDLE_PRICE.toFixed(2));
+      return txRepository.createOrder({
+        project: { connect: { id: projectId } },
+        orderNo: makeOrderNo(projectId),
+        title: "设计方案生成次数包（2次）",
+        creditsGranted: ORDER_BUNDLE_CREDITS,
+        originalAmount,
+        discountAmount: new Prisma.Decimal("0.00"),
+        payableAmount: originalAmount,
+        status: "PENDING"
+      });
+    });
+  } catch (error) {
+    const fallback = await repository.findLatestOpenOrder(projectId);
+    if (fallback) {
+      return fallback;
+    }
+    throw error;
+  }
+}
+
 function errorResponse(status: number, error: string) {
   return NextResponse.json({ error }, { status });
 }
@@ -81,20 +113,7 @@ export async function POST(_request: Request, context: { params: Promise<{ proje
       });
     }
 
-    let order = await repository.findLatestOpenOrder(projectId);
-    if (!order) {
-      const originalAmount = new Prisma.Decimal(ORDER_BUNDLE_PRICE.toFixed(2));
-      order = await repository.createOrder({
-        project: { connect: { id: projectId } },
-        orderNo: makeOrderNo(projectId),
-        title: "设计方案生成次数包（2次）",
-        creditsGranted: ORDER_BUNDLE_CREDITS,
-        originalAmount,
-        discountAmount: new Prisma.Decimal("0.00"),
-        payableAmount: originalAmount,
-        status: "PENDING"
-      });
-    }
+    const order = await getOrCreateOpenOrder(projectId);
 
     if (project.status !== "AWAITING_PAYMENT") {
       await repository.updateProjectStatus(projectId, "AWAITING_PAYMENT");
