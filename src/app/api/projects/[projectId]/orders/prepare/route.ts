@@ -121,10 +121,6 @@ export async function POST(_request: Request, context: { params: Promise<{ proje
 
     const remainingCredits = Math.max(0, project.generationCreditsPurchased - project.generationCreditsUsed);
     if (remainingCredits > 0) {
-      if (project.status !== "PAYMENT_SUCCEEDED") {
-        await repository.updateProjectStatus(projectId, "PAYMENT_SUCCEEDED");
-      }
-
       return NextResponse.json({
         order: null,
         remainingCredits,

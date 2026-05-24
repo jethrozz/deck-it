@@ -13,10 +13,11 @@ export default async function GeneratingPage({ params }: { params: Promise<{ pro
   }
 
   const canonicalRoute = getProjectRoute(project.id, project.status);
+  const allowPaymentSuccessEntry = project.status === "PAYMENT_SUCCEEDED";
   if (project.status === "BRIEF_READY") {
     redirect(`/projects/${project.id}/complete`);
   }
-  if (canonicalRoute !== `/projects/${project.id}/generating`) {
+  if (!allowPaymentSuccessEntry && canonicalRoute !== `/projects/${project.id}/generating`) {
     redirect(canonicalRoute);
   }
 

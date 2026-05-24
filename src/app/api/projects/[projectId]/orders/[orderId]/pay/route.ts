@@ -22,6 +22,10 @@ function toContactType(type: "email" | "phone") {
   return type === "email" ? ContactType.EMAIL : ContactType.PHONE;
 }
 
+function fromContactType(type: ContactType) {
+  return type === ContactType.EMAIL ? "email" : "phone";
+}
+
 function toNumber(value: Prisma.Decimal | number) {
   return typeof value === "number" ? value : Number(value.toString());
 }
@@ -126,7 +130,54 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     }
 
     if (order.status === "PROCESSING") {
-      return errorResponse(409, "订单支付处理中，请勿重复发起");
+      if (!order.contactType || !order.contactValue) {
+        return errorResponse(409, "订单支付处理中，请刷新状态。");
+      }
+
+      const processingPricing = {
+        originalAmount: toNumber(order.originalAmount),
+        discountAmount: toNumber(order.discountAmount),
+        payableAmount: toNumber(order.payableAmount)
+      };
+
+      const processingContact = {
+        type: fromContactType(order.contactType),
+        value: order.contactValue
+      } as const;
+
+      const processingFields: Record<string, string> = {
+        version: "1.1",
+        appid: paymentConfig.appId,
+        trade_order_id: order.orderNo,
+        total_fee: processingPricing.payableAmount.toFixed(2),
+        title: order.title,
+        time: String(Math.floor(Date.now() / 1000)),
+        notify_url: paymentConfig.notifyUrl,
+        return_url: paymentConfig.returnUrl,
+        nonce_str: randomUUID().replace(/-/g, "")
+      };
+
+      if (paymentConfig.plugin) {
+        processingFields.plugins = paymentConfig.plugin;
+      }
+
+      const processingHash = buildXunhuPayHash(processingFields, paymentConfig.appSecret);
+
+      return NextResponse.json({
+        order: formatOrder(order),
+        contact: processingContact,
+        coupon: null,
+        pricing: processingPricing,
+        payment: {
+          provider: "XUNHUPAY",
+          method: "POST",
+          endpoint: paymentConfig.paymentUrl,
+          fields: {
+            ...processingFields,
+            hash: processingHash
+          }
+        }
+      });
     }
 
     if (order.status === "PAID") {
@@ -177,7 +228,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
         return errorResponse(404, "订单不存在");
       }
       if (latestOrder.status === "PROCESSING") {
-        return errorResponse(409, "订单支付处理中，请勿重复发起");
+        return errorResponse(409, "订单支付处理中，请刷新后继续支付。");
       }
       if (latestOrder.status === "PAID") {
         return errorResponse(409, "订单已支付");

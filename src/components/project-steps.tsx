@@ -590,6 +590,14 @@ export function CompletedStep({
     setRegenerating(true);
     try {
       const response = await fetch(`/api/projects/${projectId}/regenerate`, { method: "POST" });
+      if (response.status === 402) {
+        const payload = (await response.json()) as { nextPath?: string };
+        if (payload.nextPath) {
+          window.location.assign(payload.nextPath);
+          return;
+        }
+        throw new Error("剩余次数不足，请先完成支付。");
+      }
       if (!response.ok) {
         throw new Error(await response.text());
       }

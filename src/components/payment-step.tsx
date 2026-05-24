@@ -101,7 +101,7 @@ function formatMoney(value: number) {
   return `¥${value.toFixed(2)}`;
 }
 
-const NON_PAYABLE_STATUSES = new Set(["PAID", "FAILED", "EXPIRED", "CANCELED", "PROCESSING"]);
+const NON_PAYABLE_STATUSES = new Set(["PAID", "FAILED", "EXPIRED", "CANCELED"]);
 
 function isOrderStatusNonPayable(status: string | undefined) {
   if (!status) {
@@ -496,7 +496,7 @@ export function PaymentStep({ project }: { project: PaymentProjectSnapshot }) {
               onClick={() => void handlePay()}
             >
               {paying ? <LoaderCircle size={16} className="animate-spin" /> : null}
-              立即支付
+              {order?.status === "PROCESSING" ? "继续支付" : "立即支付"}
             </Button>
           </div>
         </div>
