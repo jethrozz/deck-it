@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { ProjectStatus } from "@prisma/client";
 import { createAiProvider } from "@/lib/ai/provider-factory";
 import {
   type GenerationStatus,
@@ -9,6 +10,23 @@ import {
 } from "@/lib/domain/schemas";
 import { prisma } from "@/lib/db";
 import { createProjectRepository } from "@/lib/repositories/project-repository";
+
+const paymentBlockedStatuses: ProjectStatus[] = ["AWAITING_PAYMENT", "PAYMENT_PROCESSING"];
+const generationStartStatuses: ProjectStatus[] = ["INTERVIEW_COMPLETE", "PAYMENT_SUCCEEDED", "BRIEF_READY"];
+
+function getRemainingCredits(purchased: number, used: number) {
+  return Math.max(0, purchased - used);
+}
+
+function paymentRequiredResponse(projectId: string) {
+  return NextResponse.json(
+    {
+      error: "当前生成额度已用完，请先完成支付后再生成。",
+      nextPath: `/projects/${projectId}/payment`
+    },
+    { status: 402 }
+  );
+}
 
 export async function POST(_request: Request, context: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await context.params;
@@ -26,6 +44,56 @@ export async function POST(_request: Request, context: { params: Promise<{ proje
   }
 
   const repo = createProjectRepository(prisma);
+  const remainingCredits = getRemainingCredits(project.generationCreditsPurchased, project.generationCreditsUsed);
+
+  if (remainingCredits <= 0 || paymentBlockedStatuses.includes(project.status)) {
+    if (remainingCredits <= 0 && !paymentBlockedStatuses.includes(project.status)) {
+      await repo.updateProjectStatus(projectId, "AWAITING_PAYMENT");
+    }
+    return paymentRequiredResponse(projectId);
+  }
+
+  if (!generationStartStatuses.includes(project.status)) {
+    return NextResponse.json({ error: "当前项目状态不允许开始生成，请稍后刷新页面重试。" }, { status: 409 });
+  }
+
+  try {
+    const consumed = await repo.consumeProjectCredit(projectId);
+    if (!consumed) {
+      const latestProject = await prisma.project.findUnique({
+        where: { id: projectId },
+        select: {
+          status: true,
+          generationCreditsPurchased: true,
+          generationCreditsUsed: true
+        }
+      });
+
+      if (!latestProject) {
+        return NextResponse.json({ error: "项目不存在。" }, { status: 404 });
+      }
+
+      const latestRemaining = getRemainingCredits(
+        latestProject.generationCreditsPurchased,
+        latestProject.generationCreditsUsed
+      );
+
+      if (latestRemaining <= 0 || paymentBlockedStatuses.includes(latestProject.status)) {
+        if (latestRemaining <= 0 && !paymentBlockedStatuses.includes(latestProject.status)) {
+          await repo.updateProjectStatus(projectId, "AWAITING_PAYMENT");
+        }
+        return paymentRequiredResponse(projectId);
+      }
+
+      return NextResponse.json({ error: "当前项目正在处理生成任务，请稍后重试。" }, { status: 409 });
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("Credit consumption contention")) {
+      return NextResponse.json({ error: "生成请求较多，请稍后重试。" }, { status: 409 });
+    }
+    throw error;
+  }
+
   const provider = createAiProvider();
   const analysis = floorPlanAnalysisSchema.parse(project.analysis.analysisJson);
   const profile = preferenceProfileSchema.parse(project.preference.profileJson);

@@ -104,4 +104,98 @@ describe("project repository", () => {
       data: { status: "INTERVIEWING" }
     });
   });
+
+  it("consumes one credit when project is eligible", async () => {
+    const prisma = {
+      project: {
+        findUnique: vi.fn().mockResolvedValue({
+          status: "PAYMENT_SUCCEEDED",
+          generationCreditsPurchased: 2,
+          generationCreditsUsed: 0
+        }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 })
+      }
+    };
+
+    const repo = createProjectRepository(prisma as never);
+    const consumed = await repo.consumeProjectCredit("p1");
+
+    expect(consumed).toBe(true);
+    expect(prisma.project.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: "p1",
+        status: { in: ["PAYMENT_SUCCEEDED", "BRIEF_READY", "INTERVIEW_COMPLETE"] },
+        generationCreditsUsed: 0
+      },
+      data: {
+        generationCreditsUsed: {
+          increment: 1
+        }
+      }
+    });
+  });
+
+  it("does not consume credit when quota is exhausted", async () => {
+    const prisma = {
+      project: {
+        findUnique: vi.fn().mockResolvedValue({
+          status: "PAYMENT_SUCCEEDED",
+          generationCreditsPurchased: 1,
+          generationCreditsUsed: 1
+        }),
+        updateMany: vi.fn()
+      }
+    };
+
+    const repo = createProjectRepository(prisma as never);
+    const consumed = await repo.consumeProjectCredit("p1");
+
+    expect(consumed).toBe(false);
+    expect(prisma.project.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("does not consume credit for ineligible project statuses", async () => {
+    const prisma = {
+      project: {
+        findUnique: vi.fn().mockResolvedValue({
+          status: "INTERVIEWING",
+          generationCreditsPurchased: 2,
+          generationCreditsUsed: 0
+        }),
+        updateMany: vi.fn()
+      }
+    };
+
+    const repo = createProjectRepository(prisma as never);
+    const consumed = await repo.consumeProjectCredit("p1");
+
+    expect(consumed).toBe(false);
+    expect(prisma.project.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("retries credit consumption on contention and succeeds on a later attempt", async () => {
+    const prisma = {
+      project: {
+        findUnique: vi
+          .fn()
+          .mockResolvedValueOnce({
+            status: "PAYMENT_SUCCEEDED",
+            generationCreditsPurchased: 3,
+            generationCreditsUsed: 0
+          })
+          .mockResolvedValueOnce({
+            status: "PAYMENT_SUCCEEDED",
+            generationCreditsPurchased: 3,
+            generationCreditsUsed: 1
+          }),
+        updateMany: vi.fn().mockResolvedValueOnce({ count: 0 }).mockResolvedValueOnce({ count: 1 })
+      }
+    };
+
+    const repo = createProjectRepository(prisma as never);
+    const consumed = await repo.consumeProjectCredit("p1");
+
+    expect(consumed).toBe(true);
+    expect(prisma.project.updateMany).toHaveBeenCalledTimes(2);
+  });
 });

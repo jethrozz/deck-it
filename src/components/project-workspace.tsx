@@ -271,6 +271,7 @@ export function ProjectWorkspace({ project }: ProjectWorkspaceProps) {
               event.preventDefault();
               runAction("agent-respond", async () => {
                 const response = await submitJson<AgentResult>(`/api/projects/${project.id}/agent/respond`, {
+                  action: "answer",
                   answer
                 });
 
@@ -296,6 +297,8 @@ export function ProjectWorkspace({ project }: ProjectWorkspaceProps) {
                     }
                   ]);
                   setStatus("INTERVIEWING");
+                } else {
+                  setStatus("INTERVIEW_COMPLETE");
                 }
 
                 setAgentResult(response);
@@ -318,6 +321,7 @@ export function ProjectWorkspace({ project }: ProjectWorkspaceProps) {
                 onClick={() =>
                   runAction("agent-next-question", async () => {
                     const response = await submitJson<AgentResult>(`/api/projects/${project.id}/agent/respond`, {
+                      action: "start",
                       answer: ""
                     });
 

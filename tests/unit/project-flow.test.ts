@@ -53,6 +53,13 @@ describe("project flow", () => {
     expect(getProjectStep("BRIEF_READY").key).toBe("complete");
   });
 
+  it("keeps interview-complete on generating step so credit is only consumed by real generate calls", () => {
+    const projectId = "p1";
+
+    expect(getProjectRoute(projectId, "INTERVIEW_COMPLETE")).toBe("/projects/p1/generating");
+    expect(getProjectStep("INTERVIEW_COMPLETE").key).toBe("generating");
+  });
+
   it("returns the zero-based index for a wizard step key", () => {
     expect(getStepIndex("upload")).toBe(0);
     expect(getStepIndex("analysis")).toBe(1);
