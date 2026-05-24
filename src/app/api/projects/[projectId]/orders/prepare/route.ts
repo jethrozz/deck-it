@@ -42,36 +42,56 @@ function makeOrderNo(projectId: string) {
   return `ORD-${Date.now()}-${projectId.slice(0, 6).toUpperCase()}-${suffix}`;
 }
 
+function isSerializationConflict(error: unknown) {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034";
+}
+
 async function getOrCreateOpenOrder(projectId: string) {
   const repository = createProjectRepository(prisma);
+  const maxRetries = 3;
+  let lastSerializationError: unknown = null;
 
-  try {
-    return await prisma.$transaction(async (tx) => {
-      const txRepository = createProjectRepository(tx as never);
-      const existing = await txRepository.findLatestOpenOrder(projectId);
-      if (existing) {
-        return existing;
+  for (let attempt = 0; attempt < maxRetries; attempt += 1) {
+    try {
+      return await prisma.$transaction(
+        async (tx) => {
+          const txRepository = createProjectRepository(tx as never);
+          const existing = await txRepository.findLatestOpenOrder(projectId);
+          if (existing) {
+            return existing;
+          }
+
+          const originalAmount = new Prisma.Decimal(ORDER_BUNDLE_PRICE.toFixed(2));
+          return txRepository.createOrder({
+            project: { connect: { id: projectId } },
+            orderNo: makeOrderNo(projectId),
+            title: "设计方案生成次数包（2次）",
+            creditsGranted: ORDER_BUNDLE_CREDITS,
+            originalAmount,
+            discountAmount: new Prisma.Decimal("0.00"),
+            payableAmount: originalAmount,
+            status: "PENDING"
+          });
+        },
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable
+        }
+      );
+    } catch (error) {
+      if (isSerializationConflict(error)) {
+        lastSerializationError = error;
+        continue;
       }
-
-      const originalAmount = new Prisma.Decimal(ORDER_BUNDLE_PRICE.toFixed(2));
-      return txRepository.createOrder({
-        project: { connect: { id: projectId } },
-        orderNo: makeOrderNo(projectId),
-        title: "设计方案生成次数包（2次）",
-        creditsGranted: ORDER_BUNDLE_CREDITS,
-        originalAmount,
-        discountAmount: new Prisma.Decimal("0.00"),
-        payableAmount: originalAmount,
-        status: "PENDING"
-      });
-    });
-  } catch (error) {
-    const fallback = await repository.findLatestOpenOrder(projectId);
-    if (fallback) {
-      return fallback;
+      throw error;
     }
-    throw error;
   }
+
+  const fallback = await repository.findLatestOpenOrder(projectId);
+  if (fallback) {
+    return fallback;
+  }
+
+  throw lastSerializationError ?? new Error("Failed to prepare order due to transaction conflict");
 }
 
 function errorResponse(status: number, error: string) {
