@@ -18,13 +18,11 @@ cp .env.example .env
 
 3. Set `DATABASE_URL`.
 
-For Supabase-backed environments, use the Postgres connection string from Supabase Dashboard -> `Connect`.
+Use a MySQL connection string.
 
-- Preferred for Prisma app servers: Supavisor Session pooler (`:5432`)
-- If you use a transaction pooler string (`:6543`), append `?pgbouncer=true`
-- Do not add `NEXT_PUBLIC_SUPABASE_URL`, publishable keys, or secret keys for this phase; this app still talks to the database through Prisma only
-
-You can still use a local Postgres instance for purely local work if you prefer.
+- URL-encode special characters in the password such as `@`, `:`, `/`, `?`, and `#`
+- This app talks to the database through Prisma only
+- You can use either a managed MySQL instance or a local MySQL server
 
 4. Generate Prisma client:
 
@@ -46,13 +44,12 @@ npm run dev
 
 The default `AI_PROVIDER=mock` runs the full flow without external model credentials.
 
-## Supabase Postgres Workflow
+## MySQL Workflow
 
-This project uses **Prisma as the only application data layer** even when the database is hosted on Supabase.
+This project uses **Prisma as the only application data layer** when talking to MySQL.
 
 - `src/lib/db.ts` remains the single runtime database entrypoint.
 - `prisma/schema.prisma` remains the schema source of truth.
-- The `@supabase/supabase-js` / `@supabase/ssr` setup is intentionally out of scope for this phase.
 
 Useful commands:
 
@@ -67,7 +64,7 @@ npm run db:inventory
 - `db:check` verifies Prisma can connect to the active `DATABASE_URL`.
 - `db:inventory` prints row counts for the main Prisma-managed tables before or after migration.
 
-Full migration steps live in [docs/supabase-postgres-migration.md](/Users/jethrozz/Documents/UGit/deck-it/docs/supabase-postgres-migration.md).
+Full migration steps live in [docs/mysql-migration.md](/Users/jethrozz/Documents/UGit/deck-it/docs/mysql-migration.md).
 
 ## Payment Configuration (XunhuPay)
 

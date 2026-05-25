@@ -15,9 +15,7 @@ export function ensureDatabaseUrl(databaseUrl = process.env.DATABASE_URL) {
   const value = databaseUrl?.trim();
 
   if (!value) {
-    throw new Error(
-      "DATABASE_URL is not set. Point it to your Supabase Postgres connection string before running database checks."
-    );
+    throw new Error("DATABASE_URL is not set. Point it to your MySQL connection string before running database checks.");
   }
 
   return value;
@@ -45,7 +43,7 @@ export async function collectTableCounts(client, tableNames = CRITICAL_TABLES) {
   const inventory = [];
 
   for (const tableName of tableNames) {
-    const rows = await client.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "${tableName}"`);
+    const rows = await client.$queryRawUnsafe(`SELECT COUNT(*) AS count FROM \`${tableName}\``);
     const rowCount = Number(rows?.[0]?.count ?? 0);
 
     inventory.push({
