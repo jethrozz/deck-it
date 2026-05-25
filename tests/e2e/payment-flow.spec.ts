@@ -34,18 +34,13 @@ async function expectOk(response: APIResponse, context: string) {
 
 async function createProjectId(request: APIRequestContext, namePrefix: string) {
   const response = await request.post("/api/projects", {
-    form: { name: `${namePrefix}-${Date.now()}` },
-    maxRedirects: 0
+    form: { name: `${namePrefix}-${Date.now()}` }
   });
-  expect(response.status()).toBeGreaterThanOrEqual(300);
-  expect(response.status()).toBeLessThan(400);
+  expect(response.status()).toBe(201);
 
-  const location = response.headers()["location"];
-  expect(location).toBeTruthy();
-
-  const matched = location?.match(/\/projects\/([^/]+)\/upload$/);
-  expect(matched).toBeTruthy();
-  return matched![1];
+  const payload = (await response.json()) as { projectId: string; nextPath: string };
+  expect(payload.nextPath).toBe(`/projects/${payload.projectId}/upload`);
+  return payload.projectId;
 }
 
 async function setupAnalysisAndPreference(request: APIRequestContext, projectId: string) {

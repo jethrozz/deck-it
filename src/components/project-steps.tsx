@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import React from "react";
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   CheckCircle2,
@@ -30,6 +31,9 @@ function getErrorMessage(error: unknown) {
 }
 
 export function CreateProjectHero() {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const heroFeatures = [
     { icon: <ScanSearch size={22} />, label: "户型分析" },
     { icon: <Sparkles size={22} />, label: "风格匹配" },
@@ -37,6 +41,30 @@ export function CreateProjectHero() {
     { icon: <House size={22} />, label: "方案生成" },
     { icon: <SquarePen size={22} />, label: "PDF brief" }
   ];
+
+  async function handleCreateProject(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setError(null);
+
+    try {
+      const formData = new FormData(event.currentTarget);
+      const response = await fetch("/api/projects", {
+        method: "POST",
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const payload = (await response.json()) as { nextPath: string };
+      router.push(payload.nextPath);
+    } catch (submitError) {
+      setError(getErrorMessage(submitError));
+      setBusy(false);
+    }
+  }
 
   return (
     <main className="min-h-screen bg-[#050914] p-3 text-white md:p-6">
@@ -130,7 +158,7 @@ export function CreateProjectHero() {
                   <h2 className="text-5xl font-semibold tracking-tight text-white">创建新项目</h2>
                 </div>
 
-                <form action="/api/projects" method="post" className="grid gap-6">
+                <form onSubmit={(event) => void handleCreateProject(event)} className="grid gap-6">
                   <label className="grid gap-3 text-base">
                     <span className="font-medium text-white/88">项目名称</span>
                     <FieldInput
@@ -143,11 +171,14 @@ export function CreateProjectHero() {
                   </label>
                   <Button
                     type="submit"
+                    disabled={busy}
                     className="h-22 w-full justify-center rounded-[20px] bg-[linear-gradient(90deg,#5a72ff_0%,#2e61ff_100%)] py-6 text-[26px] font-semibold shadow-[0_22px_50px_rgba(41,88,255,0.32)]"
                   >
+                    {busy ? <LoaderCircle size={28} className="animate-spin" /> : null}
                     开始创建
-                    <ArrowRight size={28} />
+                    {!busy ? <ArrowRight size={28} /> : null}
                   </Button>
+                  {error ? <p className="text-sm text-[#ffb4b4]">{error}</p> : null}
                 </form>
 
               </div>

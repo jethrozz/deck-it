@@ -2,11 +2,11 @@ import { redirect } from "next/navigation";
 import { UploadStep } from "@/components/project-steps";
 import { WizardShell } from "@/components/wizard-shell";
 import { getProjectRoute } from "@/lib/projects/flow";
-import { getProjectDetail } from "@/lib/projects/load-project";
+import { getProjectSummary } from "@/lib/projects/load-project";
 
 export default async function UploadPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await params;
-  const project = await getProjectDetail(projectId);
+  const project = await getProjectSummary(projectId);
 
   if (!project) {
     return <main className="p-8 text-sm text-[var(--muted)]">项目不存在</main>;

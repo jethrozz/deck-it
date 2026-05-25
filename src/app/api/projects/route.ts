@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { createProjectRepository } from "@/lib/repositories/project-repository";
 
@@ -9,5 +8,12 @@ export async function POST(request: Request) {
 
   const repo = createProjectRepository(prisma);
   const project = await repo.createProject(name || "我的装修方案");
-  redirect(`/projects/${project.id}/upload`);
+
+  return Response.json(
+    {
+      projectId: project.id,
+      nextPath: `/projects/${project.id}/upload`
+    },
+    { status: 201 }
+  );
 }

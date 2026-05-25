@@ -1,5 +1,16 @@
 import { prisma } from "@/lib/db";
 
+export async function getProjectSummary(projectId: string) {
+  return prisma.project.findUnique({
+    where: { id: projectId },
+    select: {
+      id: true,
+      name: true,
+      status: true
+    }
+  });
+}
+
 export async function getProjectDetail(projectId: string) {
   return prisma.project.findUnique({
     where: { id: projectId },
