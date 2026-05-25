@@ -13,11 +13,20 @@
   --accent: #2d68ff;
   --accent-soft: #edf3ff;
   --accent-strong: #1d4d47;
+  --page-gutter: 16px;
+  --mobile-action-bar-height: 88px;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --page-gutter: 24px;
+    --mobile-action-bar-height: 0px;
+  }
 }
 
 body {
   margin: 0;
-  background: var(--background);
+  background: radial-gradient(circle at top, rgba(45, 104, 255, 0.06), transparent 28%), var(--background);
   color: var(--foreground);
   font-family: Inter, Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
 }

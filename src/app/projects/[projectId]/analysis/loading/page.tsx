@@ -22,7 +22,12 @@ export default async function AnalysisLoadingPage({ params }: { params: Promise<
   }
 
   return (
-    <WizardShell currentStep="analysis" footer="预计需要 30-60 秒，请稍候。">
+    <WizardShell
+      currentStep="analysis"
+      title="正在分析户型"
+      description="系统正在识别房间布局、采光和空间关系。"
+      footer="预计需要 30-60 秒，请稍候。"
+    >
       <AnalysisLoadingStep projectId={project.id} currentStatus={project.status} />
     </WizardShell>
   );

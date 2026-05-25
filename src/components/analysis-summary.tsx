@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import React from "react";
 import { AlertCircle, BedDouble, Home, Lamp, Route } from "lucide-react";
 import { roomLabels } from "@/lib/projects/labels";
 import { cx, Surface } from "@/components/ui/primitives";
@@ -26,7 +27,7 @@ export function AnalysisSummary({
   }, {});
 
   return (
-    <Surface className={cx("grid gap-5 p-5", className)}>
+    <Surface className={cx("grid gap-4 p-4 md:gap-5 md:p-5", className)}>
       <div className="grid gap-3">
         <h2 className="text-lg font-semibold">分析摘要</h2>
         <SummaryRow

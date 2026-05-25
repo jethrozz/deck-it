@@ -1,6 +1,7 @@
 "use client";
 
 import { LoaderCircle, RefreshCcw } from "lucide-react";
+import React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { Button, FieldInput, Surface } from "@/components/ui/primitives";
@@ -59,11 +60,13 @@ type CurrentResponse = {
 
 type PayResponse = QuoteResponse & {
   order: PaymentOrder;
-  payment: {
-    provider: string;
-    method: "POST" | string;
-    endpoint: string;
-    fields: Record<string, string>;
+  paymentProviderResult: {
+    openid: string | number | null;
+    url_qrcode: string | null;
+    url: string | null;
+    errcode: number | null;
+    errmsg: string | null;
+    hash: string | null;
   };
 };
 
@@ -115,29 +118,6 @@ function isOrderStatusNonPayable(status: string | undefined) {
   return NON_PAYABLE_STATUSES.has(status);
 }
 
-function submitPaymentForm(payment: PayResponse["payment"]) {
-  if (payment.method !== "POST") {
-    throw new Error("暂不支持当前支付请求方式");
-  }
-
-  const form = document.createElement("form");
-  form.method = "POST";
-  form.action = payment.endpoint;
-  form.style.display = "none";
-
-  Object.entries(payment.fields).forEach(([key, value]) => {
-    const input = document.createElement("input");
-    input.type = "hidden";
-    input.name = key;
-    input.value = value;
-    form.appendChild(input);
-  });
-
-  document.body.appendChild(form);
-  form.submit();
-  document.body.removeChild(form);
-}
-
 function applyContactFromOrder(
   order: PaymentOrder | null,
   setEmail: Dispatch<SetStateAction<string>>,
@@ -172,6 +152,7 @@ export function PaymentStep({ project }: { project: PaymentProjectSnapshot }) {
   const [refreshing, setRefreshing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [paymentGatewayResult, setPaymentGatewayResult] = useState<PayResponse["paymentProviderResult"] | null>(null);
   const isMountedRef = useRef(true);
 
   const canStartGenerate = remainingCredits > 0;
@@ -221,6 +202,9 @@ export function PaymentStep({ project }: { project: PaymentProjectSnapshot }) {
       setProjectStatus(payload.projectStatus);
       setRemainingCredits(payload.remainingCredits);
       setOrder(payload.order);
+      if (payload.order?.status !== "PROCESSING") {
+        setPaymentGatewayResult(null);
+      }
 
       applyContactFromOrder(payload.order, setEmail, setPhone);
 
@@ -383,9 +367,9 @@ export function PaymentStep({ project }: { project: PaymentProjectSnapshot }) {
         coupon: payload.coupon,
         pricing: payload.pricing
       });
+      setPaymentGatewayResult(payload.paymentProviderResult);
       setProjectStatus("PAYMENT_PROCESSING");
-      setNotice("已拉起支付，请在支付完成后返回本页面。");
-      submitPaymentForm(payload.payment);
+      setNotice("请使用下方二维码完成支付，支付完成后本页面会自动刷新状态。");
     } catch (requestError) {
       setError(getErrorMessage(requestError));
     } finally {
@@ -394,14 +378,14 @@ export function PaymentStep({ project }: { project: PaymentProjectSnapshot }) {
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1.3fr)_340px]">
-      <Surface className="grid gap-5 p-5 md:p-6">
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_340px]">
+      <Surface className="grid gap-4 p-4 md:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="grid gap-1">
             <h2 className="text-xl font-semibold">订单支付</h2>
             <p className="text-sm text-[var(--muted)]">完成支付后解锁 2 次生成额度，支持重新追问后再次生成。</p>
           </div>
-          <div className="rounded-full bg-[var(--panel-soft)] px-3 py-1 text-xs font-medium text-[var(--muted)]">
+          <div className="rounded-full bg-white px-3 py-1 text-xs font-medium text-[var(--muted)]">
             {canStartGenerate ? "已可开始生成" : order?.status === "PROCESSING" ? "支付处理中" : "待支付"}
           </div>
         </div>
@@ -430,6 +414,7 @@ export function PaymentStep({ project }: { project: PaymentProjectSnapshot }) {
             <label className="grid gap-2 text-sm">
               <span className="text-[var(--muted)]">邮箱</span>
               <FieldInput
+                aria-label="邮箱"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="name@example.com"
@@ -439,6 +424,7 @@ export function PaymentStep({ project }: { project: PaymentProjectSnapshot }) {
             <label className="grid gap-2 text-sm">
               <span className="text-[var(--muted)]">手机号</span>
               <FieldInput
+                aria-label="手机号"
                 value={phone}
                 onChange={(event) => setPhone(event.target.value)}
                 placeholder="13800000000"
@@ -469,7 +455,7 @@ export function PaymentStep({ project }: { project: PaymentProjectSnapshot }) {
             </Button>
           </div>
 
-          <div className="grid gap-2 rounded-2xl bg-[var(--panel-soft)] p-4 text-sm">
+          <div data-testid="payment-summary-card" className="grid gap-2 rounded-2xl bg-[var(--panel-soft)] p-4 text-sm">
             <div className="flex items-center justify-between">
               <span className="text-[var(--muted)]">原价</span>
               <span>{formatMoney(pricing?.originalAmount ?? 0)}</span>
@@ -496,6 +482,7 @@ export function PaymentStep({ project }: { project: PaymentProjectSnapshot }) {
             </Button>
             <Button
               type="button"
+              className="hidden md:inline-flex"
               disabled={payDisabled}
               onClick={() => void handlePay()}
             >
@@ -505,8 +492,41 @@ export function PaymentStep({ project }: { project: PaymentProjectSnapshot }) {
           </div>
         </div>
 
+        <div data-testid="payment-mobile-action-bar" className="grid gap-3 md:hidden">
+          {canStartGenerate ? (
+            <Button type="button" onClick={() => window.location.assign(`/projects/${project.id}/generating`)}>
+              开始生成
+            </Button>
+          ) : (
+            <Button type="button" disabled={payDisabled} onClick={() => void handlePay()}>
+              {paying ? <LoaderCircle size={16} className="animate-spin" /> : null}
+              {order?.status === "PROCESSING" ? "继续支付" : "立即支付"}
+            </Button>
+          )}
+        </div>
+
         {notice ? <p className="text-sm text-[var(--muted)]">{notice}</p> : null}
         {error ? <p className="text-sm text-[#b7443b]">{error}</p> : null}
+
+        {paymentGatewayResult?.url_qrcode ? (
+          <div className="grid gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel-soft)] p-4">
+            <h4 className="text-sm font-semibold">扫码支付</h4>
+            <img
+              src={paymentGatewayResult.url_qrcode}
+              alt="支付二维码"
+              className="h-52 w-52 rounded-xl border border-[var(--line)] bg-white p-2"
+            />
+            {paymentGatewayResult.url ? (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => window.open(paymentGatewayResult.url ?? "", "_blank", "noopener,noreferrer")}
+              >
+                打开支付链接
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
       </Surface>
 
       <Surface className="grid h-fit gap-4 p-5">

@@ -24,7 +24,11 @@ export default async function PaymentPage({ params }: { params: Promise<{ projec
   }
 
   return (
-    <WizardShell currentStep="generating">
+    <WizardShell
+      currentStep="generating"
+      title="确认并支付"
+      description="确认订单信息并完成支付，支付成功后即可开始生成。"
+    >
       <PaymentStep project={JSON.parse(JSON.stringify(project))} />
     </WizardShell>
   );

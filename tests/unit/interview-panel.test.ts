@@ -150,4 +150,25 @@ describe("InterviewPanel", () => {
 
     expect(screen.getByText("5/12")).not.toBeNull();
   });
+
+  it("toggles mobile project summary card", () => {
+    Object.defineProperty(window.HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: vi.fn()
+    });
+
+    render(
+      React.createElement(InterviewPanel, {
+        projectId: "p3",
+        status: "INTERVIEWING",
+        analysis,
+        preference,
+        initialConversation
+      })
+    );
+
+    const toggle = screen.getByRole("button", { name: /展开项目摘要/ });
+    fireEvent.click(toggle);
+    expect(screen.getAllByText("希望空间更温暖，也更好收纳").length).toBeGreaterThan(0);
+  });
 });

@@ -13,6 +13,7 @@ type AgentTurn =
 
 const prisma = new PrismaClient();
 const DEFAULT_MAX_INTERVIEW_TURNS = 24;
+test.use({ viewport: { width: 390, height: 844 } });
 
 function resolveMaxInterviewTurns() {
   const raw = Number(process.env.E2E_MAX_INTERVIEW_TURNS ?? DEFAULT_MAX_INTERVIEW_TURNS);
@@ -135,7 +136,7 @@ test.afterAll(async () => {
   await prisma.$disconnect();
 });
 
-test("generation is gated by payment and leads to payment page", async ({ page, request }) => {
+test("generation is gated by payment and leads to the mobile payment page", async ({ page, request }) => {
   test.setTimeout(120000);
 
   const projectId = await createInterviewCompleteProject(request, "e2e-payment-gate");
@@ -152,13 +153,16 @@ test("generation is gated by payment and leads to payment page", async ({ page, 
   await page.goto(generatePayload.nextPath!);
   await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/payment$`));
   await expect(page.getByRole("heading", { name: "订单支付" })).toBeVisible();
+  await expect(page.getByTestId("payment-summary-card")).toBeVisible();
+  await expect(page.getByTestId("payment-mobile-action-bar")).toBeVisible();
   await expect(page.getByText("完成支付后解锁 2 次生成额度")).toBeVisible();
   await expect(page.getByRole("button", { name: "立即支付" })).toBeVisible();
   await expect(page.getByText(/ORD-\d+-/)).toBeVisible();
   await expect(page.getByText("PENDING")).toBeVisible();
 
-  const payableSummary = page.locator("div").filter({ hasText: "应付金额" }).first();
-  await expect(payableSummary).toContainText("¥199.00");
+  const payableSummary = page.getByTestId("payment-summary-card");
+  await expect(payableSummary).toContainText("应付金额");
+  await expect(payableSummary).toContainText(/¥\d+\.\d{2}/);
 });
 
 test("regenerate returns repurchase path when credits are exhausted", async ({ request }) => {

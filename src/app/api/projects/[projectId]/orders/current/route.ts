@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { ensureXunhuPayOrderReconcileScheduler } from "@/lib/payments/xunhupay-reconcile";
 
 function toNumber(value: Prisma.Decimal | number) {
   return typeof value === "number" ? value : Number(value.toString());
@@ -43,6 +44,7 @@ function errorResponse(status: number, error: string) {
 }
 
 export async function GET(_request: Request, context: { params: Promise<{ projectId: string }> }) {
+  ensureXunhuPayOrderReconcileScheduler();
   const { projectId } = await context.params;
 
   try {

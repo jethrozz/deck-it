@@ -57,6 +57,7 @@ export function InterviewPanel({
 }) {
   const [conversation, setConversation] = useState(initialConversation);
   const [draft, setDraft] = useState("");
+  const [summaryOpen, setSummaryOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [completedTransition, setCompletedTransition] = useState<{ nextPath: string } | null>(null);
@@ -183,8 +184,8 @@ export function InterviewPanel({
   const isLocked = pending || completedTransition !== null;
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_320px]">
-      <Surface className="grid min-h-[560px] gap-4 p-5">
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_320px]">
+      <Surface className="grid min-h-[min(70vh,640px)] gap-4 p-4 md:min-h-[560px] md:p-5">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold">AI 设计师</h2>
@@ -195,7 +196,42 @@ export function InterviewPanel({
           </div>
         </div>
 
-        <div className="grid flex-1 gap-4 overflow-y-auto rounded-[24px] bg-[var(--panel-soft)] p-4">
+        <button
+          type="button"
+          className="flex items-center justify-between rounded-2xl border border-[var(--line)] bg-[var(--panel-soft)] px-4 py-3 text-left lg:hidden"
+          onClick={() => setSummaryOpen((current) => !current)}
+        >
+          <span className="text-sm font-medium">项目摘要</span>
+          <span className="text-xs text-[var(--muted)]">{summaryOpen ? "收起项目摘要" : "展开项目摘要"}</span>
+        </button>
+
+        {summaryOpen ? (
+          <aside className="grid gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel-soft)] p-4 lg:hidden">
+            <SummaryItem label="户型" value={analysis.rooms.map((room) => roomLabels[room.type]).join(" / ")} />
+            <SummaryItem label="风格" value={styleLabels[preference.style]} />
+            <SummaryItem
+              label="预算"
+              value={`${budgetLabels[preference.budgetTier].title}（${budgetLabels[preference.budgetTier].range}）`}
+            />
+            <SummaryItem label="补充需求" value={preference.naturalLanguagePreference} />
+            <div className="rounded-2xl border border-[var(--line)] bg-white p-4">
+              <div className="mb-2 flex items-center justify-between text-sm">
+                <span className="font-medium">追问进度</span>
+                <span className="text-[var(--muted)]">
+                  {progress.current}/{progress.max}
+                </span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-[var(--panel-soft)]">
+                <div
+                  className="h-full rounded-full bg-[var(--accent)] transition-all"
+                  style={{ width: `${Math.max(8, (progress.current / progress.max) * 100)}%` }}
+                />
+              </div>
+            </div>
+          </aside>
+        ) : null}
+
+        <div className="grid flex-1 auto-rows-max content-start gap-4 overflow-y-auto rounded-[24px] bg-[var(--panel-soft)] p-4">
           {conversation.map((message) => (
             <div
               key={message.id}
@@ -230,10 +266,10 @@ export function InterviewPanel({
               </Button>
             ))}
           </div>
-        ) : null}
+          ) : null}
 
         <form
-          className="grid gap-3"
+          className="grid gap-3 border-t border-[var(--line)] pt-3"
           onSubmit={(event) => {
             event.preventDefault();
             if (!draft.trim() || isLocked) {
@@ -267,7 +303,7 @@ export function InterviewPanel({
         </form>
       </Surface>
 
-      <Surface className="grid h-fit gap-4 p-5">
+      <Surface className="hidden h-fit gap-4 p-5 lg:grid">
         <div>
           <h3 className="text-base font-semibold">项目摘要</h3>
           <p className="mt-1 text-sm text-[var(--muted)]">设计师会持续参考这些信息做判断。</p>

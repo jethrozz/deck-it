@@ -14,7 +14,7 @@ export function Button({ className, variant = "primary", ...props }: ButtonProps
   return (
     <button
       className={cx(
-        "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
+        "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
         variant === "primary" && "bg-[var(--accent)] text-white shadow-[0_10px_30px_rgba(45,104,255,0.22)]",
         variant === "secondary" && "border border-[var(--line)] bg-white text-[var(--foreground)]",
         variant === "ghost" && "text-[var(--muted)]",
@@ -29,7 +29,7 @@ export function Surface({ className, ...props }: HTMLAttributes<HTMLDivElement>)
   return (
     <div
       className={cx(
-        "rounded-[28px] border border-[var(--line)] bg-white shadow-[0_18px_60px_rgba(18,35,71,0.08)]",
+        "rounded-[24px] border border-[var(--line)] bg-white shadow-[0_18px_60px_rgba(18,35,71,0.08)] md:rounded-[28px]",
         className
       )}
       {...props}

@@ -79,6 +79,8 @@ Set these environment variables before enabling real payment:
 - `XUNHUPAY_NOTIFY_URL` (must point to `/api/payments/xunhupay/notify`)
 - `XUNHUPAY_RETURN_URL` (optional, defaults to project payment page)
 - `XUNHUPAY_PAYMENT_URL` (optional, defaults to `https://api.xunhupay.com/payment/do.html`)
+- `XUNHUPAY_QUERY_URL` (optional, defaults to `https://api.xunhupay.com/payment/query.html`)
+- `XUNHUPAY_RECONCILE_ENABLED` (optional, default `true`, controls backend order polling task)
 - `XUNHUPAY_PLUGIN` (optional payment channel/plugin passthrough)
 
 Order bundle pricing is currently **not env-configurable**. It is hardcoded in `src/lib/orders/constants.ts`:
@@ -90,6 +92,7 @@ Order bundle pricing is currently **not env-configurable**. It is hardcoded in `
 
 - Interview completion no longer enters generation directly. It first enters `/projects/{projectId}/payment`.
 - Payment success unlocks generation credits; each successful bundle purchase grants `2` credits.
+- Backend starts a reconcile task that runs every `30s` and queries **today's** pending/processing XunhuPay orders.
 - Starting generation consumes `1` credit per attempt.
 - Re-entering interview and then starting generation also consumes `1` credit.
 - When credits are exhausted, generate/regenerate routes return `requiresPayment=true` and `nextPath=/projects/{projectId}/payment`.

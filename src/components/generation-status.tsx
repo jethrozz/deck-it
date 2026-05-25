@@ -120,8 +120,8 @@ export function GenerationStatusPanel({
   }, [initialStatus]);
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
-      <Surface className="grid gap-4 p-5">
+    <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
+      <Surface className="order-2 grid gap-4 p-4 md:p-5 lg:order-1">
         {tasks.map((task) => (
           <div key={task.key} className="rounded-2xl border border-[var(--line)] bg-[var(--panel-soft)] px-4 py-4">
             <div className="flex items-start gap-3">
@@ -144,7 +144,7 @@ export function GenerationStatusPanel({
         ) : null}
       </Surface>
 
-      <Surface className="grid gap-4 p-5">
+      <Surface className="order-1 grid gap-4 p-4 md:p-5 lg:order-2">
         <div>
           <h2 className="text-lg font-semibold">生成预览</h2>
           <p className="mt-1 text-sm text-[var(--muted)]">

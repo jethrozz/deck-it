@@ -19,7 +19,11 @@ export default async function PreferencesPage({ params }: { params: Promise<{ pr
   }
 
   return (
-    <WizardShell currentStep="preferences">
+    <WizardShell
+      currentStep="preferences"
+      title="风格与预算"
+      description="选择喜欢的风格、预算档位，并补充你的生活需求。"
+    >
       <PreferencesStep
         projectId={project.id}
         initialPreference={project.preference ? preferenceProfileSchema.parse(project.preference.profileJson) : null}

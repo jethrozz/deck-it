@@ -16,7 +16,11 @@ export default async function CompletePage({ params }: { params: Promise<{ proje
   }
 
   return (
-    <WizardShell currentStep="complete">
+    <WizardShell
+      currentStep="complete"
+      title="方案已完成"
+      description="你的专属设计结果已经准备好了，现在可以查看、下载或重新补充需求。"
+    >
       <CompletedStep
         projectId={project.id}
         renderings={JSON.parse(JSON.stringify(project.renderings))}

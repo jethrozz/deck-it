@@ -18,7 +18,12 @@ export default async function UploadPage({ params }: { params: Promise<{ project
   }
 
   return (
-    <WizardShell currentStep="upload" footer="我们会自动识别房间、采光和空间关系。">
+    <WizardShell
+      currentStep="upload"
+      title="上传户型图"
+      description="上传清晰户型图，我们会自动识别房间、采光和空间关系。"
+      footer="我们会自动识别房间、采光和空间关系。"
+    >
       <UploadStep projectId={project.id} />
     </WizardShell>
   );

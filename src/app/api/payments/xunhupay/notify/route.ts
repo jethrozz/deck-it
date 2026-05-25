@@ -1,6 +1,7 @@
 import { createOrderService } from "@/lib/orders/order-service";
 import { prisma } from "@/lib/db";
 import { verifyXunhuPayHash } from "@/lib/payments/xunhupay";
+import { ensureXunhuPayOrderReconcileScheduler } from "@/lib/payments/xunhupay-reconcile";
 
 function successResponse() {
   return new Response("success", {
@@ -25,6 +26,7 @@ function readString(value: FormDataEntryValue | null | undefined) {
 }
 
 export async function POST(request: Request) {
+  ensureXunhuPayOrderReconcileScheduler();
   const formData = await request.formData();
   const payload: Record<string, string> = {};
 
