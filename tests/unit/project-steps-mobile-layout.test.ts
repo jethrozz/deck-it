@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { AnalysisConfirmStep, PreferencesStep, UploadStep } from "@/components/project-steps";
 
 const analysis = {
@@ -20,6 +20,10 @@ const analysis = {
 };
 
 describe("mobile step layout", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("renders upload area before the helper tips card", () => {
     const { container } = render(React.createElement(UploadStep, { projectId: "p1" }));
     const sections = Array.from(container.querySelectorAll("[data-testid]")).map((node) => node.getAttribute("data-testid"));
@@ -44,5 +48,82 @@ describe("mobile step layout", () => {
     render(React.createElement(PreferencesStep, { projectId: "p1" }));
     expect(screen.getByText("补充你的需求和想法")).not.toBeNull();
     expect(screen.getByRole("button", { name: "保存并继续" })).not.toBeNull();
+  });
+
+  it("marks save-and-continue busy while preferences submission is pending", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>(() => {
+            // Keep the request pending so we can observe the loading state.
+          })
+      )
+    );
+
+    render(
+      React.createElement(PreferencesStep, {
+        projectId: "p1",
+        initialPreference: {
+          style: "modern_minimal",
+          budgetTier: "quality",
+          naturalLanguagePreference: "想要更好打理，也需要更多收纳。",
+          lifestyleNotes: [],
+          hardConstraints: [],
+          adoptedSuggestions: [],
+          rejectedSuggestions: []
+        }
+      })
+    );
+
+    const button = screen.getByRole("button", { name: "保存并继续" });
+    fireEvent.click(button);
+
+    const loadingButton = screen.getByRole("button", { name: "保存并继续" });
+
+    expect(loadingButton.hasAttribute("disabled")).toBe(true);
+    expect(loadingButton.getAttribute("aria-busy")).toBe("true");
+    expect(loadingButton.textContent).toContain("保存并继续");
+    expect(loadingButton.querySelector("svg.animate-spin[aria-hidden='true']")).not.toBeNull();
+  });
+
+  it("only shows busy state on the clicked analysis action while keeping both labels visible", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>(() => {
+            // Keep the request pending so we can observe the loading state.
+          })
+      )
+    );
+
+    render(
+      React.createElement(AnalysisConfirmStep, {
+        projectId: "p1",
+        floorPlanUrl: "/demo.png",
+        analysis
+      })
+    );
+
+    const skipButton = screen.getByRole("button", { name: "跳过，确认无误" });
+    const confirmButton = screen.getByRole("button", { name: "确认并继续" });
+
+    fireEvent.click(confirmButton);
+
+    const loadingConfirmButton = screen.getByRole("button", { name: "确认并继续" });
+    const disabledSkipButton = screen.getByRole("button", { name: "跳过，确认无误" });
+
+    expect(loadingConfirmButton.hasAttribute("disabled")).toBe(true);
+    expect(loadingConfirmButton.getAttribute("aria-busy")).toBe("true");
+    expect(loadingConfirmButton.textContent).toContain("确认并继续");
+    expect(loadingConfirmButton.querySelector("svg.animate-spin[aria-hidden='true']")).not.toBeNull();
+
+    expect(disabledSkipButton.hasAttribute("disabled")).toBe(true);
+    expect(disabledSkipButton.getAttribute("aria-busy")).toBeNull();
+    expect(disabledSkipButton.textContent).toContain("跳过，确认无误");
+    expect(disabledSkipButton.querySelector("svg.animate-spin")).toBeNull();
+
+    expect(skipButton).not.toBe(confirmButton);
   });
 });

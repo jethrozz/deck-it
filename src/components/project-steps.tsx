@@ -171,10 +171,10 @@ export function CreateProjectHero() {
                   </label>
                   <Button
                     type="submit"
-                    disabled={busy}
+                    loading={busy}
+                    loadingIndicator={<LoaderCircle size={28} className="animate-spin" aria-hidden="true" />}
                     className="h-22 w-full justify-center rounded-[20px] bg-[linear-gradient(90deg,#5a72ff_0%,#2e61ff_100%)] py-6 text-[26px] font-semibold shadow-[0_22px_50px_rgba(41,88,255,0.32)]"
                   >
-                    {busy ? <LoaderCircle size={28} className="animate-spin" /> : null}
                     开始创建
                     {!busy ? <ArrowRight size={28} /> : null}
                   </Button>
@@ -246,8 +246,7 @@ export function UploadStep({ projectId }: { projectId: string }) {
               }
             }}
           />
-          <Button type="button" onClick={() => inputRef.current?.click()} disabled={!isReady || busy}>
-            {busy ? <LoaderCircle size={16} className="animate-spin" /> : null}
+          <Button type="button" onClick={() => inputRef.current?.click()} disabled={!isReady} loading={busy}>
             选择图片
           </Button>
           {fileName ? <p className="text-sm text-[var(--muted)]">已选择：{fileName}</p> : null}
@@ -375,13 +374,15 @@ export function AnalysisConfirmStep({
   const [isReady, setIsReady] = useState(false);
   const [corrections, setCorrections] = useState(analysis.userCorrections.join("\n"));
   const [busy, setBusy] = useState(false);
+  const [pendingAction, setPendingAction] = useState<"skip" | "confirm" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setIsReady(true);
   }, []);
 
-  async function submit(correctionItems: string[]) {
+  async function submit(action: "skip" | "confirm", correctionItems: string[]) {
+    setPendingAction(action);
     setBusy(true);
     setError(null);
 
@@ -405,6 +406,7 @@ export function AnalysisConfirmStep({
       });
     } catch (submitError) {
       setError(getErrorMessage(submitError));
+      setPendingAction(null);
       setBusy(false);
     }
   }
@@ -440,15 +442,18 @@ export function AnalysisConfirmStep({
               type="button"
               variant="secondary"
               disabled={!isReady || busy}
-              onClick={() => void submit([])}
+              loading={busy && pendingAction === "skip"}
+              onClick={() => void submit("skip", [])}
             >
               跳过，确认无误
             </Button>
             <Button
               type="button"
               disabled={!isReady || busy}
+              loading={busy && pendingAction === "confirm"}
               onClick={() =>
                 void submit(
+                  "confirm",
                   corrections
                     .split("\n")
                     .map((item) => item.trim())
@@ -456,7 +461,6 @@ export function AnalysisConfirmStep({
                 )
               }
             >
-              {busy ? <LoaderCircle size={16} className="animate-spin" /> : null}
               确认并继续
             </Button>
           </div>
@@ -555,8 +559,7 @@ export function PreferencesStep({
         />
         <div className="flex items-center justify-between">
           {error ? <p className="text-sm text-[#b7443b]">{error}</p> : <div />}
-          <Button type="button" disabled={!isReady || busy} onClick={() => void submit()}>
-            {busy ? <LoaderCircle size={16} className="animate-spin" /> : null}
+          <Button type="button" disabled={!isReady} loading={busy} onClick={() => void submit()}>
             保存并继续
           </Button>
         </div>
@@ -655,12 +658,12 @@ export function CompletedStep({
             <RefreshCcw size={16} />
             重新进入追问
           </Button>
-          <Button type="button" variant="secondary" onClick={() => void regeneratePlan()} disabled={regenerating}>
-            {regenerating ? <LoaderCircle size={16} className="animate-spin" /> : <Sparkles size={16} />}
+          <Button type="button" variant="secondary" onClick={() => void regeneratePlan()} loading={regenerating}>
+            {!regenerating ? <Sparkles size={16} /> : null}
             重新生成方案
           </Button>
-          <Button type="button" onClick={downloadBrief} disabled={downloading} className="md:col-span-2">
-            {downloading ? <LoaderCircle size={16} className="animate-spin" /> : <FileText size={16} />}
+          <Button type="button" onClick={downloadBrief} loading={downloading} className="md:col-span-2">
+            {!downloading ? <FileText size={16} /> : null}
             下载 PDF brief
           </Button>
         </div>
