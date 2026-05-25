@@ -1,8 +1,10 @@
 "use client";
 
+import React from "react";
 import { useMemo, useState } from "react";
 import { FileText, Image, LoaderCircle, MessageSquare, WandSparkles } from "lucide-react";
 import { BriefPreview } from "@/components/brief-preview";
+import { Button } from "@/components/ui/primitives";
 
 type ConversationMessage = {
   id: string;
@@ -69,6 +71,7 @@ export function ProjectWorkspace({ project }: ProjectWorkspaceProps) {
 
   const currentQuestionText =
     agentResult && agentResult.type === "question" ? agentResult.question.question : "点击获取下一步问题。";
+  const isAgentActionBusy = busyAction === "agent-next-question" || busyAction === "agent-respond";
 
   const reverseConversation = useMemo(() => [...conversation].reverse(), [conversation]);
 
@@ -152,14 +155,13 @@ export function ProjectWorkspace({ project }: ProjectWorkspaceProps) {
               required
               className="rounded-md border border-[var(--line)] bg-white px-3 py-2"
             />
-            <button
+            <Button
               type="submit"
-              disabled={busyAction === "analyze-floor-plan"}
-              className="inline-flex items-center gap-2 rounded-md bg-[var(--accent)] px-4 py-2 text-white disabled:opacity-60"
+              loading={busyAction === "analyze-floor-plan"}
+              className="rounded-md px-4 py-2"
             >
-              {busyAction === "analyze-floor-plan" ? <LoaderCircle size={16} className="animate-spin" /> : null}
               分析户型
-            </button>
+            </Button>
           </form>
         </section>
 
@@ -230,14 +232,13 @@ export function ProjectWorkspace({ project }: ProjectWorkspaceProps) {
               />
             </label>
 
-            <button
+            <Button
               type="submit"
-              disabled={busyAction === "save-preferences"}
-              className="inline-flex w-fit items-center gap-2 rounded-md bg-[var(--accent)] px-4 py-2 text-white disabled:opacity-60"
+              loading={busyAction === "save-preferences"}
+              className="w-fit rounded-md px-4 py-2"
             >
-              {busyAction === "save-preferences" ? <LoaderCircle size={16} className="animate-spin" /> : null}
               保存偏好
-            </button>
+            </Button>
           </form>
         </section>
 
@@ -320,7 +321,7 @@ export function ProjectWorkspace({ project }: ProjectWorkspaceProps) {
               className="rounded-md border border-[var(--line)] bg-white px-3 py-2"
             />
             <div className="flex flex-wrap gap-3">
-              <button
+              <Button
                 type="button"
                 onClick={() =>
                   runAction("agent-next-question", async () => {
@@ -349,23 +350,22 @@ export function ProjectWorkspace({ project }: ProjectWorkspaceProps) {
                     setSuccess(response.type === "question" ? "已获取问题。" : "Agent 追问已完成。");
                   })
                 }
-                disabled={busyAction === "agent-next-question" || busyAction === "agent-respond"}
-                className="inline-flex items-center gap-2 rounded-md bg-[var(--accent)] px-4 py-2 text-white disabled:opacity-60"
+                disabled={isAgentActionBusy}
+                loading={busyAction === "agent-next-question"}
+                className="rounded-md px-4 py-2"
               >
-                {busyAction === "agent-next-question" ? (
-                  <LoaderCircle size={16} className="animate-spin" />
-                ) : null}
                 获取下一步问题
-              </button>
+              </Button>
 
-              <button
+              <Button
                 type="submit"
-                disabled={busyAction === "agent-respond"}
-                className="inline-flex items-center gap-2 rounded-md border border-[var(--line)] bg-white px-4 py-2 disabled:opacity-60"
+                variant="secondary"
+                disabled={isAgentActionBusy}
+                loading={busyAction === "agent-respond"}
+                className="rounded-md px-4 py-2"
               >
-                {busyAction === "agent-respond" ? <LoaderCircle size={16} className="animate-spin" /> : null}
                 提交回答
-              </button>
+              </Button>
             </div>
           </form>
 
