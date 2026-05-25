@@ -33,7 +33,11 @@ export default async function InterviewPage({ params }: { params: Promise<{ proj
   }
 
   return (
-    <WizardShell currentStep="interview">
+    <WizardShell
+      currentStep="interview"
+      title="设计师追问"
+      description="AI 设计师会结合户型、预算和偏好，逐步确认你的真实需求。"
+    >
       <InterviewStep
         projectId={project.id}
         status={project.status}

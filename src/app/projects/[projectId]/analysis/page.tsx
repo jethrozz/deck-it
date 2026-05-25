@@ -25,7 +25,11 @@ export default async function AnalysisPage({ params }: { params: Promise<{ proje
   }
 
   return (
-    <WizardShell currentStep="analysis">
+    <WizardShell
+      currentStep="analysis"
+      title="确认户型分析"
+      description="看看 AI 是否正确理解了你的户型，再进入下一步。"
+    >
       <AnalysisConfirmStep projectId={project.id} floorPlanUrl={project.floorPlanUrl} analysis={analysis} />
     </WizardShell>
   );

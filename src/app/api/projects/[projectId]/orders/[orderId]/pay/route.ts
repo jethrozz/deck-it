@@ -5,6 +5,7 @@ import { z } from "zod";
 import { ensureBuiltInCoupons } from "@/lib/orders/bootstrap";
 import { createOrderService } from "@/lib/orders/order-service";
 import { buildXunhuPayHash } from "@/lib/payments/xunhupay";
+import { ensureXunhuPayOrderReconcileScheduler } from "@/lib/payments/xunhupay-reconcile";
 import { prisma } from "@/lib/db";
 import { createProjectRepository } from "@/lib/repositories/project-repository";
 
@@ -62,12 +63,12 @@ function resolvePaymentConfig(requestUrl: string, projectId: string) {
   const appId = process.env.XUNHUPAY_APP_ID?.trim();
   const appSecret = process.env.XUNHUPAY_APP_SECRET?.trim();
   const notifyUrl = process.env.XUNHUPAY_NOTIFY_URL?.trim();
-  const paymentUrl = process.env.XUNHUPAY_PAYMENT_URL?.trim() ?? "https://api.xunhupay.com/payment/do.html";
+  const paymentUrl = process.env.XUNHUPAY_PAYMENT_URL?.trim() || "https://api.xunhupay.com/payment/do.html";
   const plugin = process.env.XUNHUPAY_PLUGIN?.trim();
 
   const requestOrigin = new URL(requestUrl).origin;
   const publicBaseUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() || requestOrigin;
-  const returnUrl = process.env.XUNHUPAY_RETURN_URL?.trim() ?? `${publicBaseUrl}/projects/${projectId}/payment`;
+  const returnUrl = process.env.XUNHUPAY_RETURN_URL?.trim() || `${publicBaseUrl}/projects/${projectId}/payment`;
 
   if (!appId || !appSecret || !notifyUrl) {
     return null;
@@ -101,7 +102,50 @@ function toClientError(error: unknown) {
   return { status: 500, error: "发起支付失败，请稍后重试" };
 }
 
+type XunhuPayCreateResponse = {
+  errcode?: number;
+  errmsg?: string;
+  openid?: string | number;
+  url_qrcode?: string;
+  url?: string;
+  hash?: string;
+};
+
+async function requestXunhuPayPayment(endpoint: string, fields: Record<string, string>) {
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded"
+    },
+    body: new URLSearchParams(fields)
+  });
+
+  const raw = await response.text();
+  let payload: XunhuPayCreateResponse | null = null;
+  try {
+    payload = JSON.parse(raw) as XunhuPayCreateResponse;
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    throw new Error(payload?.errmsg?.trim() || `支付网关请求失败（${response.status}）`);
+  }
+
+  if (!payload) {
+    throw new Error("支付网关返回格式异常");
+  }
+
+  if ((payload.errcode ?? 1) !== 0) {
+    throw new Error(payload.errmsg?.trim() || "支付网关返回失败");
+  }
+
+  return payload;
+}
+
 export async function POST(request: Request, context: { params: Promise<{ projectId: string; orderId: string }> }) {
+  ensureXunhuPayOrderReconcileScheduler();
+
   let requestBody: unknown;
   try {
     requestBody = await request.json();
@@ -162,20 +206,23 @@ export async function POST(request: Request, context: { params: Promise<{ projec
       }
 
       const processingHash = buildXunhuPayHash(processingFields, paymentConfig.appSecret);
+      const providerResult = await requestXunhuPayPayment(paymentConfig.paymentUrl, {
+        ...processingFields,
+        hash: processingHash
+      });
 
       return NextResponse.json({
         order: formatOrder(order),
         contact: processingContact,
         coupon: null,
         pricing: processingPricing,
-        payment: {
-          provider: "XUNHUPAY",
-          method: "POST",
-          endpoint: paymentConfig.paymentUrl,
-          fields: {
-            ...processingFields,
-            hash: processingHash
-          }
+        paymentProviderResult: {
+          openid: providerResult.openid ?? null,
+          url_qrcode: providerResult.url_qrcode ?? null,
+          url: providerResult.url ?? null,
+          errcode: providerResult.errcode ?? null,
+          errmsg: providerResult.errmsg ?? null,
+          hash: providerResult.hash ?? null
         }
       });
     }
@@ -260,20 +307,40 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     }
 
     const hash = buildXunhuPayHash(fields, paymentConfig.appSecret);
+    let providerResult: XunhuPayCreateResponse;
+    try {
+      providerResult = await requestXunhuPayPayment(paymentConfig.paymentUrl, {
+        ...fields,
+        hash
+      });
+    } catch (gatewayError) {
+      // If gateway call failed before the user paid, reopen this order for retry.
+      await prisma.order.updateMany({
+        where: {
+          id: updated.id,
+          status: "PROCESSING",
+          paidAt: null
+        },
+        data: {
+          status: "PENDING"
+        }
+      });
+
+      throw gatewayError;
+    }
 
     return NextResponse.json({
       order: formatOrder(updated),
       contact: quote.contact,
       coupon: quote.coupon,
       pricing: quote.pricing,
-      payment: {
-        provider: "XUNHUPAY",
-        method: "POST",
-        endpoint: paymentConfig.paymentUrl,
-        fields: {
-          ...fields,
-          hash
-        }
+      paymentProviderResult: {
+        openid: providerResult.openid ?? null,
+        url_qrcode: providerResult.url_qrcode ?? null,
+        url: providerResult.url ?? null,
+        errcode: providerResult.errcode ?? null,
+        errmsg: providerResult.errmsg ?? null,
+        hash: providerResult.hash ?? null
       }
     });
   } catch (error) {

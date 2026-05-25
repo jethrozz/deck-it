@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import React from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
@@ -38,9 +39,9 @@ export function CreateProjectHero() {
   ];
 
   return (
-    <main className="min-h-screen bg-[#050914] p-4 text-white md:p-6">
+    <main className="min-h-screen bg-[#050914] p-3 text-white md:p-6">
       <div
-        className="relative mx-auto flex min-h-[calc(100vh-2rem)] max-w-[1520px] overflow-hidden rounded-[36px] border border-white/10 bg-[#040915] md:min-h-[calc(100vh-3rem)] md:rounded-[40px]"
+        className="relative mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-[1520px] overflow-hidden rounded-[28px] border border-white/10 bg-[#040915] md:min-h-[calc(100vh-3rem)] md:rounded-[40px]"
         style={{
           backgroundImage:
             "linear-gradient(90deg, rgba(4,9,21,0.96) 0%, rgba(4,9,21,0.92) 38%, rgba(4,9,21,0.5) 63%, rgba(4,9,21,0.28) 100%), url('/home-hero-reference.png')",
@@ -50,16 +51,16 @@ export function CreateProjectHero() {
       >
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_54%,rgba(38,130,255,0.18),transparent_34%),radial-gradient(circle_at_72%_22%,rgba(99,117,255,0.18),transparent_26%)]" />
 
-        <div className="relative z-10 mx-auto grid w-full max-w-[1440px] gap-10 px-8 py-8 lg:grid-cols-[minmax(0,1.05fr)_520px] lg:px-12 lg:py-10">
-          <section className="flex min-h-[720px] flex-col justify-between gap-10">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#5d74ff]/40 bg-[linear-gradient(180deg,rgba(50,101,255,0.18),rgba(131,89,255,0.14))] shadow-[0_18px_40px_rgba(45,104,255,0.18)]">
-                  <House size={28} className="text-[#86a3ff]" />
+        <div className="relative z-10 mx-auto grid w-full max-w-[1440px] gap-8 px-5 py-6 lg:grid-cols-[minmax(0,1.05fr)_520px] lg:px-12 lg:py-10">
+          <section className="flex min-h-0 flex-col gap-8 lg:min-h-[720px] lg:justify-between">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#5d74ff]/40 bg-[linear-gradient(180deg,rgba(50,101,255,0.18),rgba(131,89,255,0.14))] shadow-[0_18px_40px_rgba(45,104,255,0.18)]">
+                  <House size={22} className="text-[#86a3ff]" />
                 </div>
-                <div className="flex items-end gap-4">
-                  <span className="text-[42px] font-semibold leading-none tracking-tight text-white">装它</span>
-                  <span className="pb-1 text-[24px] font-medium text-white/70">deck it</span>
+                <div className="flex items-end gap-2">
+                  <span className="text-[28px] font-semibold leading-none tracking-tight text-white">装它</span>
+                  <span className="pb-0.5 text-base font-medium text-white/70">deck it</span>
                 </div>
               </div>
 
@@ -71,34 +72,30 @@ export function CreateProjectHero() {
               </div>
             </div>
 
-            <div className="grid max-w-3xl gap-8">
+            <div className="grid max-w-3xl gap-6">
               <div className="grid gap-5">
-                <h1 className="text-5xl font-semibold leading-[1.06] tracking-tight text-white md:text-7xl">
+                <h1 className="text-4xl font-semibold leading-[1.08] tracking-tight text-white md:text-7xl">
                   AI 设计师
                   <br />
                   让装修想法从无到有
                 </h1>
                 <div className="h-px w-44 bg-[linear-gradient(90deg,rgba(30,187,255,0),rgba(30,187,255,1)_38%,rgba(132,107,255,0.45)_100%)] shadow-[0_0_24px_rgba(30,187,255,0.55)]" />
-                <p className="max-w-2xl text-2xl leading-[1.9] text-white/78">
-                  为你梳理思路，提供专业的设计建议
-                  <br />
-                  沉淀装修前的沟通 brief
-                </p>
+                <p className="max-w-2xl text-base leading-7 text-white/78 md:text-2xl md:leading-[1.9]">为你梳理思路，提供专业的设计建议，沉淀装修前的沟通 brief</p>
               </div>
 
-              <div className="grid max-w-4xl grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
+              <div className="hidden max-w-4xl grid-cols-2 gap-3 sm:grid-cols-3 lg:grid lg:grid-cols-5">
                 {heroFeatures.map((feature) => (
-                  <div key={feature.label} className="grid justify-items-center gap-3 text-center">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#5d74ff]/30 bg-[linear-gradient(180deg,rgba(28,45,94,0.46),rgba(11,19,43,0.72))] text-[#62c5ff] shadow-[0_18px_40px_rgba(34,102,255,0.16)] backdrop-blur-xl">
+                  <div key={feature.label} className="grid justify-items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-3 text-center backdrop-blur">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#5d74ff]/30 bg-[linear-gradient(180deg,rgba(28,45,94,0.46),rgba(11,19,43,0.72))] text-[#62c5ff] shadow-[0_18px_40px_rgba(34,102,255,0.16)] backdrop-blur-xl">
                       {feature.icon}
                     </div>
-                    <span className="text-xl font-medium text-white/88">{feature.label}</span>
+                    <span className="text-sm font-medium text-white/88 md:text-lg">{feature.label}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="grid max-w-[760px] gap-5 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(10,16,34,0.84),rgba(8,14,29,0.7))] px-6 py-6 shadow-[0_28px_80px_rgba(0,0,0,0.26)] backdrop-blur-xl md:grid-cols-[1.1fr_1fr]">
+            <div className="hidden max-w-[760px] gap-5 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(10,16,34,0.84),rgba(8,14,29,0.7))] px-6 py-6 shadow-[0_28px_80px_rgba(0,0,0,0.26)] backdrop-blur-xl lg:grid lg:grid-cols-[1.1fr_1fr]">
               <div className="flex items-center gap-4">
                 <div className="flex -space-x-3">
                   {["#d9dde8", "#f1dfd5", "#d2c5bb"].map((color, index) => (
@@ -126,8 +123,8 @@ export function CreateProjectHero() {
             </div>
           </section>
 
-          <div className="flex items-center justify-center lg:justify-end">
-            <Surface className="w-full max-w-[480px] rounded-[36px] border border-[#5073ff]/55 bg-[linear-gradient(180deg,rgba(15,23,54,0.92),rgba(12,18,41,0.86))] p-8 text-white shadow-[0_0_0_1px_rgba(110,137,255,0.14),0_34px_90px_rgba(13,21,48,0.58),0_0_42px_rgba(48,92,255,0.26)] backdrop-blur-2xl md:p-10">
+          <div className="flex items-end justify-stretch lg:items-center lg:justify-end">
+            <Surface className="w-full max-w-[480px] rounded-[28px] border border-[#5073ff]/55 bg-[linear-gradient(180deg,rgba(15,23,54,0.92),rgba(12,18,41,0.86))] p-6 text-white shadow-[0_0_0_1px_rgba(110,137,255,0.14),0_34px_90px_rgba(13,21,48,0.58),0_0_42px_rgba(48,92,255,0.26)] backdrop-blur-2xl md:rounded-[36px] md:p-10">
               <div className="grid gap-7">
                 <div className="grid gap-3">
                   <h2 className="text-5xl font-semibold tracking-tight text-white">创建新项目</h2>
@@ -153,10 +150,6 @@ export function CreateProjectHero() {
                   </Button>
                 </form>
 
-                <div className="flex items-center justify-center gap-3 text-lg text-white/56">
-                  <CheckCircle2 size={18} />
-                  创建后可随时修改和继续
-                </div>
               </div>
             </Surface>
           </div>
@@ -200,8 +193,8 @@ export function UploadStep({ projectId }: { projectId: string }) {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-      <Surface className="grid place-items-center border-dashed p-8">
+    <div className="grid gap-4 md:gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+      <Surface data-testid="upload-dropzone" className="grid place-items-center border-dashed p-6 md:p-8">
         <div className="grid max-w-md justify-items-center gap-4 text-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--accent-soft)] text-[var(--accent)]">
             <UploadCloud size={28} />
@@ -231,7 +224,7 @@ export function UploadStep({ projectId }: { projectId: string }) {
         </div>
       </Surface>
 
-      <Surface className="grid h-fit gap-3 p-5">
+      <Surface data-testid="upload-tips" className="grid h-fit gap-3 p-4 md:p-5">
         <h3 className="text-base font-semibold">上传建议</h3>
         <ul className="grid gap-3 text-sm leading-6 text-[var(--muted)]">
           <li>确保户型图清晰可见。</li>
@@ -302,8 +295,8 @@ export function AnalysisLoadingStep({
   }, [currentStatus, projectId]);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-      <Surface className="grid min-h-[420px] place-items-center p-8">
+    <div className="grid gap-4 md:gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+      <Surface className="grid min-h-[360px] place-items-center p-6 md:min-h-[420px] md:p-8">
         <div className="grid max-w-md justify-items-center gap-6 text-center">
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[radial-gradient(circle_at_center,rgba(45,104,255,0.2),rgba(45,104,255,0.08)_58%,transparent_60%)] text-[var(--accent)]">
             <LoaderCircle size={30} className="animate-spin" />
@@ -322,7 +315,7 @@ export function AnalysisLoadingStep({
         </div>
       </Surface>
 
-      <Surface className="grid h-fit gap-3 p-5">
+      <Surface className="grid h-fit gap-3 p-4 md:p-5">
         <h3 className="text-base font-semibold">识别任务</h3>
         <ul className="grid gap-3 text-sm text-[var(--muted)]">
           {["识别房间", "分析采光", "空间关系", "动线分析", "收纳分析"].map((item, index) => (
@@ -386,8 +379,8 @@ export function AnalysisConfirmStep({
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_420px]">
-      <Surface className="grid min-h-[560px] place-items-center overflow-hidden p-4">
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_420px]">
+      <Surface data-testid="analysis-preview" className="grid min-h-[320px] place-items-center overflow-hidden p-3 md:min-h-[560px] md:p-4">
         {floorPlanUrl ? (
           <img src={floorPlanUrl} alt="户型图" className="max-h-[520px] w-full rounded-[24px] object-contain" />
         ) : (
@@ -396,8 +389,10 @@ export function AnalysisConfirmStep({
       </Surface>
 
       <div className="grid gap-4">
-        <AnalysisSummary analysis={analysis} />
-        <Surface className="grid gap-4 p-5">
+        <div data-testid="analysis-summary-card">
+          <AnalysisSummary analysis={analysis} />
+        </div>
+        <Surface className="grid gap-4 p-4 md:p-5">
           <div className="grid gap-2">
             <h3 className="text-base font-semibold">以上分析准确吗？</h3>
             <p className="text-sm text-[var(--muted)]">有需要补充或修改的地方，也可以一起告诉我。</p>
@@ -503,7 +498,7 @@ export function PreferencesStep({
   }
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-5">
       <StyleBudgetCards
         selectedStyle={style}
         selectedBudget={budgetTier}
@@ -511,7 +506,7 @@ export function PreferencesStep({
         onBudgetChange={setBudgetTier}
       />
 
-      <Surface className="grid gap-4 p-5">
+      <Surface className="grid gap-4 p-4 md:p-5">
         <div className="flex items-end justify-between gap-3">
           <div className="grid gap-1">
             <h2 className="text-lg font-semibold">补充你的需求和想法</h2>
@@ -611,8 +606,8 @@ export function CompletedStep({
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_420px]">
-      <Surface className="grid gap-5 p-6">
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_420px]">
+      <Surface className="order-2 grid gap-5 p-5 md:p-6 lg:order-1">
         <div className="grid gap-2">
           <h2 className="text-3xl font-semibold">方案已生成完成</h2>
           <p className="text-sm leading-6 text-[var(--muted)]">你的专属设计方案已准备就绪，可以查看、下载，也可以回到设计师追问继续补充。</p>
@@ -640,7 +635,7 @@ export function CompletedStep({
         </div>
       </Surface>
 
-      <Surface className="overflow-hidden p-4">
+      <Surface className="order-1 overflow-hidden p-3 md:p-4 lg:order-2">
         {heroImage ? (
           <img src={heroImage} alt="方案效果图" className="h-full min-h-[420px] w-full rounded-[24px] object-cover" />
         ) : (
@@ -681,7 +676,7 @@ function ResultItem({
   );
 
   return (
-    <div className="flex items-center justify-between rounded-2xl border border-[var(--line)] bg-[var(--panel-soft)] px-4 py-4">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel-soft)] px-4 py-4">
       <div className="flex items-start gap-3">
         <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-[var(--accent)]">{icon}</div>
         <div>

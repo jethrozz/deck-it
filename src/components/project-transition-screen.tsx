@@ -90,7 +90,7 @@ export function ProjectTransitionScreen({
 
   if (state.type === "loading") {
     return (
-      <Surface className="grid min-h-[320px] place-items-center p-8">
+      <Surface className="grid min-h-[320px] place-items-center p-5 md:p-8">
         <div className="grid justify-items-center gap-3 text-center">
           <LoaderCircle size={24} className="animate-spin text-[var(--accent)]" />
           <p className="text-sm text-[var(--muted)]">正在准备下一步...</p>
@@ -101,7 +101,7 @@ export function ProjectTransitionScreen({
 
   if (state.type === "fallback") {
     return (
-      <Surface className="grid min-h-[320px] place-items-center p-8">
+      <Surface className="grid min-h-[320px] place-items-center p-5 md:p-8">
         <div className="grid max-w-lg justify-items-center gap-5 text-center">
           <SectionTitle title="未找到过渡信息" description="将返回项目页继续流程。" />
           <Button type="button" onClick={() => navRef.current(state.fallbackPath)}>
@@ -116,13 +116,13 @@ export function ProjectTransitionScreen({
 
   if (transition.mode === "confirm" && !confirmed) {
     return (
-      <Surface className="grid min-h-[320px] place-items-center p-8">
+      <Surface className="grid min-h-[360px] place-items-center p-5 md:p-8">
         <div className="grid max-w-xl gap-6 text-center">
           <SectionTitle
             title={transition.title ?? "确认继续下一步？"}
             description={transition.description ?? "确认后将继续到下一步骤。"}
           />
-          <div className="flex flex-wrap items-center justify-center gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <Button
               type="button"
               variant="secondary"
@@ -148,7 +148,7 @@ export function ProjectTransitionScreen({
   }
 
   return (
-    <Surface className="grid min-h-[320px] place-items-center p-8">
+    <Surface className="grid min-h-[320px] place-items-center p-5 md:p-8">
       <div className="grid justify-items-center gap-4 text-center">
         <LoaderCircle size={26} className="animate-spin text-[var(--accent)]" />
         <SectionTitle title={transition.title ?? "正在进入下一步"} description={transition.description ?? "请稍候..."} />

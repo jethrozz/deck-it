@@ -178,12 +178,19 @@ export function createOrderService(prisma: PrismaLike) {
         }
 
         if (order.couponId && order.contactType && order.contactValue) {
-          await txRepository.createCouponRedemption({
-            coupon: { connect: { id: order.couponId } },
-            order: { connect: { id: order.id } },
-            contactType: order.contactType,
-            contactValue: order.contactValue
+          const coupon = await tx.coupon.findUnique({
+            where: { id: order.couponId },
+            select: { isTest: true }
           });
+
+          if (!coupon?.isTest) {
+            await txRepository.createCouponRedemption({
+              coupon: { connect: { id: order.couponId } },
+              order: { connect: { id: order.id } },
+              contactType: order.contactType,
+              contactValue: order.contactValue
+            });
+          }
         }
 
         await txRepository.grantProjectCredits(order.projectId, order.creditsGranted, "PAYMENT_SUCCEEDED");

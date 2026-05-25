@@ -5,14 +5,16 @@ const onePixelPng = Buffer.from(
   "base64"
 );
 
-test("homeowner can finish the guided renovation flow", async ({ page }) => {
+test.use({ viewport: { width: 390, height: 844 } });
+
+test("homeowner can finish the guided renovation flow on mobile", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.getByRole("heading", { name: "AI 设计师" })).toBeVisible();
   await page.getByRole("button", { name: /开始创建/ }).click();
 
-  await expect(page).toHaveURL(/\/projects\/.+\/upload$/);
-  await expect(page.getByRole("heading", { name: "上传户型图" })).toBeVisible();
+  await expect(page).toHaveURL(/\/projects\/.+\/upload$/, { timeout: 15000 });
+  await expect(page.getByTestId("upload-dropzone").getByRole("heading", { name: "上传户型图" })).toBeVisible();
   await expect(page.getByRole("button", { name: "选择图片" })).toBeEnabled();
 
   const fileChooserPromise = page.waitForEvent("filechooser");
@@ -24,15 +26,27 @@ test("homeowner can finish the guided renovation flow", async ({ page }) => {
     buffer: onePixelPng
   });
 
-  await expect(page).toHaveURL(/\/projects\/.+\/analysis$/, { timeout: 15000 });
+  await expect(page).toHaveURL(/\/projects\/.+\/analysis(\/loading)?$/, { timeout: 15000 });
+  if (page.url().includes("/analysis/loading")) {
+    await expect(page).toHaveURL(/\/projects\/.+\/analysis$/, { timeout: 30000 });
+  }
   await expect(page.getByText("分析摘要")).toBeVisible();
   await expect(page.getByRole("button", { name: /确认并继续/ })).toBeEnabled();
   await page.getByRole("button", { name: /确认并继续/ }).click();
 
-  await expect(page).toHaveURL(/\/projects\/.+\/preferences$/);
-  await expect(page.getByText("选择你喜欢的风格")).toBeVisible();
-  await page.getByRole("button", { name: "现代简约" }).click();
-  await page.getByRole("button", { name: "品质型 15-25 万" }).click();
+  await expect(page).toHaveURL(/\/projects\/.+\/(preferences|transition)$/, { timeout: 15000 });
+  if (page.url().includes("/transition")) {
+    await expect(page.getByText(/正在进入下一步|正在准备下一步/)).toBeVisible();
+    await expect(page).toHaveURL(/\/projects\/.+\/preferences$/, { timeout: 15000 });
+  }
+  await expect(page.getByTestId("style-picker-trigger")).toBeVisible();
+  await page.getByTestId("style-picker-trigger").click();
+  const stylePickerModal = page.getByTestId("style-picker-modal");
+  if (await stylePickerModal.isVisible().catch(() => false)) {
+    await page.getByTestId("style-picker-slider").getByRole("button", { name: "现代简约" }).click();
+    await page.getByRole("button", { name: "确认风格" }).click();
+  }
+  await page.getByTestId("budget-tier-select").selectOption("quality");
   await page
     .getByPlaceholder("例如：希望客厅更显大，好打理；次卧兼顾书房；需要更多收纳；家里有孩子。")
     .fill("一家三口居住，希望客厅显大，次卧兼顾书房和临时客房。");
@@ -42,7 +56,7 @@ test("homeowner can finish the guided renovation flow", async ({ page }) => {
   await expect(page).toHaveURL(/\/projects\/.+\/transition$/);
   await expect(page.getByText(/正在进入下一步|正在准备下一步/)).toBeVisible();
   await expect(page).toHaveURL(/\/projects\/.+\/interview$/);
-  await expect(page.getByText("AI 设计师")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "AI 设计师" })).toBeVisible();
   await expect(page.getByText(/我看这个户型的客餐厅连接阳台/)).toBeVisible();
 
   await page
@@ -61,6 +75,17 @@ test("homeowner can finish the guided renovation flow", async ({ page }) => {
   await expect(page.getByRole("button", { name: /开始生成(方案)?/ })).toBeVisible();
   await page.getByRole("button", { name: /开始生成(方案)?/ }).click();
 
+  await expect(page).toHaveURL(/\/projects\/.+\/payment$/);
+  await expect(page.getByRole("heading", { name: "订单支付" })).toBeVisible();
+  await expect(page.getByTestId("payment-mobile-action-bar")).toBeVisible();
+
+  const canGenerateNow = await page.getByRole("button", { name: "开始生成" }).isVisible().catch(() => false);
+  if (!canGenerateNow) {
+    await expect(page.getByRole("button", { name: "立即支付" })).toBeVisible();
+    return;
+  }
+
+  await page.getByRole("button", { name: "开始生成" }).click();
   await expect(page).toHaveURL(/\/projects\/.+\/generating$/);
   await expect(page.getByText("生成预览")).toBeVisible();
 

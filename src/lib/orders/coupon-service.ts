@@ -55,21 +55,23 @@ export async function resolveCouponForContact(
 
   if (coupon.isTest) {
     const allowed = parseAllowedContacts(coupon.allowedContactValues);
-    if (!allowed.includes(contact.value)) {
+    if (allowed.length > 0 && !allowed.includes(contact.value)) {
       throw new Error("该测试优惠码不适用于当前联系方式");
     }
   }
 
-  const prior = await prisma.couponRedemption.findFirst({
-    where: {
-      couponId: coupon.id,
-      contactType: toContactType(contact.type),
-      contactValue: contact.value
-    }
-  });
+  if (!coupon.isTest) {
+    const prior = await prisma.couponRedemption.findFirst({
+      where: {
+        couponId: coupon.id,
+        contactType: toContactType(contact.type),
+        contactValue: contact.value
+      }
+    });
 
-  if (prior) {
-    throw new Error("该优惠码已被此联系方式使用");
+    if (prior) {
+      throw new Error("该优惠码已被此联系方式使用");
+    }
   }
 
   return {

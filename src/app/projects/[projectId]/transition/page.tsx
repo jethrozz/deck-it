@@ -13,7 +13,11 @@ export default async function TransitionPage({ params }: { params: Promise<{ pro
   }
 
   return (
-    <WizardShell currentStep={getProjectStep(project.status).key}>
+    <WizardShell
+      currentStep={getProjectStep(project.status).key}
+      title="确认继续"
+      description="确认后将进入下一步。"
+    >
       <ProjectTransitionScreen projectId={project.id} />
     </WizardShell>
   );

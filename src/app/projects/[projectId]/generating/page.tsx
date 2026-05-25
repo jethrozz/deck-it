@@ -22,7 +22,12 @@ export default async function GeneratingPage({ params }: { params: Promise<{ pro
   }
 
   return (
-    <WizardShell currentStep="generating" footer="生成过程中请不要关闭页面。">
+    <WizardShell
+      currentStep="generating"
+      title="正在生成方案"
+      description="系统正在整理需求画像、生成方案、效果图与 PDF brief。"
+      footer="生成过程中请不要关闭页面。"
+    >
       <GeneratingStep projectId={project.id} status={project.status} renderings={JSON.parse(JSON.stringify(project.renderings))} />
     </WizardShell>
   );

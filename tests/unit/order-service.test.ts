@@ -44,6 +44,48 @@ describe("order service", () => {
     ).rejects.toThrow("该优惠码已被此联系方式使用");
   });
 
+  it("allows test coupon reuse for the same normalized contact", async () => {
+    const prisma = {
+      $transaction: vi.fn(),
+      order: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: "o1",
+          projectId: "p1",
+          originalAmount: new Prisma.Decimal("199.00")
+        })
+      },
+      coupon: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: "c-test",
+          code: "TESTPAY",
+          discountRate: new Prisma.Decimal("0.80"),
+          isActive: true,
+          isTest: true,
+          minPayableAmount: new Prisma.Decimal("0.01"),
+          allowedContactValues: []
+        })
+      },
+      couponRedemption: {
+        findFirst: vi.fn().mockResolvedValue({
+          id: "r1"
+        })
+      }
+    };
+
+    const service = createOrderService(prisma as never);
+
+    const result = await service.quoteOrder({
+      projectId: "p1",
+      orderId: "o1",
+      email: " USER@Example.com ",
+      phone: "",
+      couponCode: "TESTPAY"
+    });
+
+    expect(result.coupon?.isTest).toBe(true);
+    expect(result.pricing.payableAmount).toBe(0.01);
+  });
+
   it("settles paid order idempotently, grants credits, and creates redemption once", async () => {
     const { service, tx, state } = createSettlementHarness();
 
@@ -73,6 +115,23 @@ describe("order service", () => {
     expect(state.projectStatus).toBe("PAYMENT_SUCCEEDED");
     expect(tx.project.update).toHaveBeenCalledTimes(1);
     expect(tx.couponRedemption.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not create redemption for test coupons", async () => {
+    const { service, tx } = createSettlementHarness({ couponIsTest: true });
+
+    const result = await service.settlePaidOrder({
+      orderNo: "ORD-1",
+      providerOrderNo: "XH-1",
+      providerStatus: "OD",
+      paidAmount: "159.20"
+    });
+
+    expect(result).toEqual({
+      creditsGranted: 2,
+      projectStatus: "PAYMENT_SUCCEEDED"
+    });
+    expect(tx.couponRedemption.create).not.toHaveBeenCalled();
   });
 
   it("rejects settlement when provider status is not OD", async () => {
@@ -148,6 +207,7 @@ describe("order service", () => {
 function createSettlementHarness(overrides?: {
   status?: "PENDING" | "PROCESSING" | "PAID" | "FAILED" | "EXPIRED" | "CANCELED";
   providerOrderNo?: string | null;
+  couponIsTest?: boolean;
 }) {
   const orderRecord = {
     id: "o1",
@@ -198,7 +258,9 @@ function createSettlementHarness(overrides?: {
       findFirst: vi.fn()
     },
     coupon: {
-      findUnique: vi.fn()
+      findUnique: vi.fn().mockResolvedValue({
+        isTest: overrides?.couponIsTest ?? false
+      })
     },
     floorPlanAnalysis: {},
     preferenceProfile: {},

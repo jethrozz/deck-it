@@ -22,9 +22,18 @@ test("real floor plan can finish the guided flow", async ({ page }) => {
   await page.getByRole("button", { name: /确认并继续/ }).click();
 
   await expect(page).toHaveURL(/\/projects\/.+\/preferences$/, { timeout: 15000 });
-  await expect(page.getByText("选择你喜欢的风格")).toBeVisible();
-  await page.getByRole("button", { name: "现代简约" }).click();
-  await page.getByRole("button", { name: "品质型 15-25 万" }).click();
+  const mobileStylePicker = page.getByTestId("style-picker-trigger");
+  if (await mobileStylePicker.isVisible().catch(() => false)) {
+    await mobileStylePicker.click();
+    await expect(page.getByTestId("style-picker-modal")).toBeVisible();
+    await page.getByTestId("style-picker-slider").getByRole("button", { name: "现代简约" }).click();
+    await page.getByRole("button", { name: "确认风格" }).click();
+    await page.getByTestId("budget-tier-select").selectOption("quality");
+  } else {
+    await expect(page.getByText("选择你喜欢的风格")).toBeVisible();
+    await page.getByRole("button", { name: "现代简约" }).click();
+    await page.getByRole("button", { name: "品质型 15-25 万" }).click();
+  }
   await page
     .getByPlaceholder("例如：希望客厅更显大，好打理；次卧兼顾书房；需要更多收纳；家里有孩子。")
     .fill("一家三口居住，希望客厅显大，保留三房功能，其中一个次卧兼顾书房和临时客房。");
