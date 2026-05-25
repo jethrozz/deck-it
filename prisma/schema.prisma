@@ -11,7 +11,7 @@ model Project {
   id                         String              @id @default(cuid())
   name                       String
   status                     ProjectStatus       @default(CREATED)
-  floorPlanUrl               String?
+  floorPlanUrl               String?             @db.LongText
   generationCreditsPurchased Int                 @default(0)
   generationCreditsUsed      Int                 @default(0)
   createdAt                  DateTime            @default(now())

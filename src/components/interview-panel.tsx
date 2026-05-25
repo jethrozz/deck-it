@@ -159,7 +159,7 @@ export function InterviewPanel({
             metadataJson: payload
           }
         ]);
-        setCompletedTransition({ nextPath: `/projects/${projectId}/payment` });
+        setCompletedTransition({ nextPath: payload.nextPath });
         return;
       }
 
@@ -295,8 +295,8 @@ export function InterviewPanel({
             ) : (
               <div />
             )}
-            <Button type="submit" disabled={isLocked || !draft.trim()}>
-              <Send size={16} />
+            <Button type="submit" loading={pending} disabled={isLocked || !draft.trim()}>
+              {!pending ? <Send size={16} /> : null}
               发送回答
             </Button>
           </div>

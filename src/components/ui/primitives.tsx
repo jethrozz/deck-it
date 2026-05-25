@@ -1,6 +1,7 @@
-import { forwardRef } from "react";
+import { LoaderCircle } from "lucide-react";
 import React from "react";
-import type { ButtonHTMLAttributes, HTMLAttributes, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
+import { forwardRef } from "react";
+import type { ButtonHTMLAttributes, HTMLAttributes, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "react";
 
 export function cx(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
@@ -8,11 +9,27 @@ export function cx(...values: Array<string | false | null | undefined>) {
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "secondary" | "ghost";
+  loading?: boolean;
+  loadingText?: string;
+  loadingIndicator?: ReactNode;
 };
 
-export function Button({ className, variant = "primary", ...props }: ButtonProps) {
+export function Button({
+  className,
+  variant = "primary",
+  loading = false,
+  loadingText,
+  loadingIndicator,
+  disabled,
+  children,
+  ...props
+}: ButtonProps) {
+  const isDisabled = disabled || loading;
+  const content = loading && loadingText ? loadingText : children;
+
   return (
     <button
+      {...props}
       className={cx(
         "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
         variant === "primary" && "bg-[var(--accent)] text-white shadow-[0_10px_30px_rgba(45,104,255,0.22)]",
@@ -20,8 +37,12 @@ export function Button({ className, variant = "primary", ...props }: ButtonProps
         variant === "ghost" && "text-[var(--muted)]",
         className
       )}
-      {...props}
-    />
+      disabled={isDisabled}
+      aria-busy={loading ? "true" : undefined}
+    >
+      {loading ? loadingIndicator ?? <LoaderCircle size={16} className="animate-spin" aria-hidden="true" /> : null}
+      {content}
+    </button>
   );
 }
 

@@ -100,7 +100,7 @@ describe("InterviewPanel", () => {
       projectId: "p1",
       from: "interview",
       to: "generating",
-      nextPath: "/projects/p1/payment"
+      nextPath: "/generating"
     });
   });
 
@@ -170,5 +170,53 @@ describe("InterviewPanel", () => {
     const toggle = screen.getByRole("button", { name: /展开项目摘要/ });
     fireEvent.click(toggle);
     expect(screen.getAllByText("希望空间更温暖，也更好收纳").length).toBeGreaterThan(0);
+  });
+
+  it("disables the submit button and marks it busy while sending an answer", async () => {
+    let resolveRequest: ((value: Response) => void) | null = null;
+    const pendingRequest = new Promise<Response>((resolve) => {
+      resolveRequest = resolve;
+    });
+
+    Object.defineProperty(window.HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: vi.fn()
+    });
+    vi.spyOn(global, "fetch").mockImplementation(() => pendingRequest);
+
+    render(
+      React.createElement(InterviewPanel, {
+        projectId: "p4",
+        status: "INTERVIEWING",
+        analysis,
+        preference,
+        initialConversation
+      })
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("输入你的想法，比如‘次卧平时不住人，希望能兼顾书房和收纳’"), {
+      target: { value: "我更想优先优化客厅。" }
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "发送回答" }));
+      await Promise.resolve();
+    });
+
+    expect(screen.getByRole("button", { name: "发送回答" })).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: "发送回答" }).getAttribute("aria-busy")).toBe("true");
+
+    await act(async () => {
+      resolveRequest?.({
+        ok: true,
+        json: async () => ({
+          type: "suggestion",
+          message: "了解，我继续确认一下预算和收纳优先级。",
+          options: ["优先预算", "优先收纳"],
+          progress: { current: 2, max: 12 }
+        })
+      } as Response);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
   });
 });

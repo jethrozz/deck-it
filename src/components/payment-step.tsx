@@ -418,7 +418,7 @@ export function PaymentStep({ project }: { project: PaymentProjectSnapshot }) {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="name@example.com"
-                disabled={paying || preparing}
+                disabled={quoting || paying || preparing}
               />
             </label>
             <label className="grid gap-2 text-sm">
@@ -428,7 +428,7 @@ export function PaymentStep({ project }: { project: PaymentProjectSnapshot }) {
                 value={phone}
                 onChange={(event) => setPhone(event.target.value)}
                 placeholder="13800000000"
-                disabled={paying || preparing}
+                disabled={quoting || paying || preparing}
               />
             </label>
           </div>
@@ -440,17 +440,17 @@ export function PaymentStep({ project }: { project: PaymentProjectSnapshot }) {
                 value={couponCode}
                 onChange={(event) => setCouponCode(event.target.value)}
                 placeholder="输入优惠码可刷新报价"
-                disabled={paying || preparing}
+                disabled={quoting || paying || preparing}
               />
             </label>
             <Button
               type="button"
               variant="secondary"
               className="self-end"
+              loading={quoting}
               disabled={!order || quoting || paying || preparing}
               onClick={() => void handleQuote()}
             >
-              {quoting ? <LoaderCircle size={16} className="animate-spin" /> : null}
               应用优惠码
             </Button>
           </div>
@@ -474,19 +474,20 @@ export function PaymentStep({ project }: { project: PaymentProjectSnapshot }) {
             <Button
               type="button"
               variant="secondary"
+              loading={refreshing}
               disabled={refreshing || preparing}
               onClick={() => void fetchCurrentOrder()}
             >
-              {refreshing ? <LoaderCircle size={16} className="animate-spin" /> : <RefreshCcw size={16} />}
+              {!refreshing ? <RefreshCcw size={16} /> : null}
               刷新支付状态
             </Button>
             <Button
               type="button"
               className="hidden md:inline-flex"
+              loading={paying}
               disabled={payDisabled}
               onClick={() => void handlePay()}
             >
-              {paying ? <LoaderCircle size={16} className="animate-spin" /> : null}
               {order?.status === "PROCESSING" ? "继续支付" : "立即支付"}
             </Button>
           </div>
@@ -498,8 +499,7 @@ export function PaymentStep({ project }: { project: PaymentProjectSnapshot }) {
               开始生成
             </Button>
           ) : (
-            <Button type="button" disabled={payDisabled} onClick={() => void handlePay()}>
-              {paying ? <LoaderCircle size={16} className="animate-spin" /> : null}
+            <Button type="button" loading={paying} disabled={payDisabled} onClick={() => void handlePay()}>
               {order?.status === "PROCESSING" ? "继续支付" : "立即支付"}
             </Button>
           )}
