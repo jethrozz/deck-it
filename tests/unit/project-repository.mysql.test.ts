@@ -5,7 +5,7 @@ import { createProjectRepository } from "@/lib/repositories/project-repository";
 const shouldRun = process.env.RUN_DB_INTEGRATION === "1" && Boolean(process.env.DATABASE_URL);
 const describeIf = shouldRun ? describe : describe.skip;
 
-describeIf("project repository supabase integration", () => {
+describeIf("project repository mysql integration", () => {
   const repo = createProjectRepository(prisma);
   const createdProjectIds: string[] = [];
 
@@ -26,7 +26,7 @@ describeIf("project repository supabase integration", () => {
   });
 
   it("persists and updates a project through the existing repository layer", async () => {
-    const project = await repo.createProject(`supabase-integration-${Date.now()}`);
+    const project = await repo.createProject(`mysql-integration-${Date.now()}`);
     createdProjectIds.push(project.id);
 
     await repo.updateProjectStatus(project.id, "INTERVIEWING");
