@@ -1,9 +1,15 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AnalysisConfirmStep, PreferencesStep, UploadStep } from "@/components/project-steps";
+import { AnalysisConfirmStep, CompletedStep, CreateProjectHero, PreferencesStep, UploadStep } from "@/components/project-steps";
+
+const push = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push })
+}));
 
 const analysis = {
   rooms: [{ name: "客厅", type: "living_dining" as const, confidence: 0.93 }],
@@ -22,6 +28,7 @@ const analysis = {
 describe("mobile step layout", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.clearAllMocks();
   });
 
   it("renders upload area before the helper tips card", () => {
@@ -125,5 +132,115 @@ describe("mobile step layout", () => {
     expect(disabledSkipButton.querySelector("svg.animate-spin")).toBeNull();
 
     expect(skipButton).not.toBe(confirmButton);
+  });
+
+  it("marks the create-project submit button busy while submission is pending", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>(() => {
+            // Keep the request pending so we can observe the loading state.
+          })
+      )
+    );
+
+    render(React.createElement(CreateProjectHero));
+
+    const button = screen.getByRole("button", { name: "开始创建" });
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      const loadingButton = screen.getByRole("button", { name: "开始创建" });
+
+      expect(loadingButton.hasAttribute("disabled")).toBe(true);
+      expect(loadingButton.getAttribute("aria-busy")).toBe("true");
+      expect(loadingButton.textContent).toContain("开始创建");
+      expect(loadingButton.querySelector("svg.animate-spin[aria-hidden='true']")).not.toBeNull();
+    });
+  });
+
+  it("only marks regenerate busy while keeping the download label available", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>(() => {
+            // Keep the request pending so we can observe the loading state.
+          })
+      )
+    );
+
+    render(
+      React.createElement(CompletedStep, {
+        projectId: "p1",
+        briefReady: true,
+        renderings: [{ id: "r1", spaceType: "living_room", imageUrl: "/demo.png", status: "SUCCEEDED" }]
+      })
+    );
+
+    const regenerateButton = screen.getByRole("button", { name: "重新生成方案" });
+    const downloadButton = screen.getByRole("button", { name: "下载 PDF brief" });
+
+    fireEvent.click(regenerateButton);
+
+    await waitFor(() => {
+      const loadingRegenerateButton = screen.getByRole("button", { name: "重新生成方案" });
+      const idleDownloadButton = screen.getByRole("button", { name: "下载 PDF brief" });
+
+      expect(loadingRegenerateButton.hasAttribute("disabled")).toBe(true);
+      expect(loadingRegenerateButton.getAttribute("aria-busy")).toBe("true");
+      expect(loadingRegenerateButton.textContent).toContain("重新生成方案");
+      expect(loadingRegenerateButton.querySelector("svg.animate-spin[aria-hidden='true']")).not.toBeNull();
+
+      expect(idleDownloadButton.hasAttribute("disabled")).toBe(false);
+      expect(idleDownloadButton.getAttribute("aria-busy")).toBeNull();
+      expect(idleDownloadButton.textContent).toContain("下载 PDF brief");
+      expect(idleDownloadButton.querySelector("svg.animate-spin")).toBeNull();
+    });
+
+    expect(regenerateButton).not.toBe(downloadButton);
+  });
+
+  it("only marks download busy while keeping the regenerate label available", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>(() => {
+            // Keep the request pending so we can observe the loading state.
+          })
+      )
+    );
+
+    render(
+      React.createElement(CompletedStep, {
+        projectId: "p1",
+        briefReady: false,
+        renderings: [{ id: "r1", spaceType: "living_room", imageUrl: "/demo.png", status: "SUCCEEDED" }]
+      })
+    );
+
+    const regenerateButton = screen.getByRole("button", { name: "重新生成方案" });
+    const downloadButton = screen.getByRole("button", { name: "下载 PDF brief" });
+
+    fireEvent.click(downloadButton);
+
+    await waitFor(() => {
+      const idleRegenerateButton = screen.getByRole("button", { name: "重新生成方案" });
+      const loadingDownloadButton = screen.getByRole("button", { name: "下载 PDF brief" });
+
+      expect(loadingDownloadButton.hasAttribute("disabled")).toBe(true);
+      expect(loadingDownloadButton.getAttribute("aria-busy")).toBe("true");
+      expect(loadingDownloadButton.textContent).toContain("下载 PDF brief");
+      expect(loadingDownloadButton.querySelector("svg.animate-spin[aria-hidden='true']")).not.toBeNull();
+
+      expect(idleRegenerateButton.hasAttribute("disabled")).toBe(false);
+      expect(idleRegenerateButton.getAttribute("aria-busy")).toBeNull();
+      expect(idleRegenerateButton.textContent).toContain("重新生成方案");
+      expect(idleRegenerateButton.querySelector("svg.animate-spin")).toBeNull();
+    });
+
+    expect(downloadButton).not.toBe(regenerateButton);
   });
 });

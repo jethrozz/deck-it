@@ -57,4 +57,30 @@ describe("ProjectWorkspace", () => {
     expect(disabledSubmitAnswerButton.className).toContain("border");
     expect(disabledSubmitAnswerButton.className).toContain("bg-white");
   });
+
+  it("shows shared button loading behavior while generating the plan", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>(() => {
+            // Keep the request pending so we can observe the loading state.
+          })
+      )
+    );
+
+    render(React.createElement(ProjectWorkspace, { project }));
+
+    const generatePlanButton = screen.getByRole("button", { name: "生成方案" });
+
+    fireEvent.click(generatePlanButton);
+
+    const loadingGeneratePlanButton = screen.getByRole("button", { name: "生成方案" });
+
+    expect(loadingGeneratePlanButton).toBeDisabled();
+    expect(loadingGeneratePlanButton).toHaveAttribute("aria-busy", "true");
+    expect(loadingGeneratePlanButton.querySelector("svg.animate-spin[aria-hidden='true']")).not.toBeNull();
+    expect(loadingGeneratePlanButton.className).toContain("min-h-11");
+    expect(loadingGeneratePlanButton.className).toContain("shadow-[0_10px_30px_rgba(45,104,255,0.22)]");
+  });
 });

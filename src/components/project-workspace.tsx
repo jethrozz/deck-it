@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useMemo, useState } from "react";
-import { FileText, Image, LoaderCircle, MessageSquare, WandSparkles } from "lucide-react";
+import { FileText, Image, MessageSquare, WandSparkles } from "lucide-react";
 import { BriefPreview } from "@/components/brief-preview";
 import { Button } from "@/components/ui/primitives";
 
@@ -392,7 +392,7 @@ export function ProjectWorkspace({ project }: ProjectWorkspaceProps) {
           </h2>
 
           <div className="flex flex-wrap gap-3">
-            <button
+            <Button
               type="button"
               onClick={() =>
                 runAction("generate-plan", async () => {
@@ -405,14 +405,13 @@ export function ProjectWorkspace({ project }: ProjectWorkspaceProps) {
                   setSuccess("设计方案已生成。");
                 })
               }
-              disabled={busyAction === "generate-plan"}
-              className="inline-flex items-center gap-2 rounded-md bg-[var(--accent)] px-4 py-2 text-white disabled:opacity-60"
+              loading={busyAction === "generate-plan"}
+              className="rounded-md px-4 py-2"
             >
-              {busyAction === "generate-plan" ? <LoaderCircle size={16} className="animate-spin" /> : null}
               生成方案
-            </button>
+            </Button>
 
-            <button
+            <Button
               type="button"
               onClick={() =>
                 runAction("generate-renderings", async () => {
@@ -430,14 +429,13 @@ export function ProjectWorkspace({ project }: ProjectWorkspaceProps) {
                   setSuccess("效果图任务完成。");
                 })
               }
-              disabled={busyAction === "generate-renderings"}
-              className="inline-flex items-center gap-2 rounded-md bg-[var(--accent)] px-4 py-2 text-white disabled:opacity-60"
+              loading={busyAction === "generate-renderings"}
+              className="rounded-md px-4 py-2"
             >
-              {busyAction === "generate-renderings" ? <LoaderCircle size={16} className="animate-spin" /> : null}
               生成效果图
-            </button>
+            </Button>
 
-            <button
+            <Button
               type="button"
               onClick={() =>
                 runAction("generate-brief", async () => {
@@ -450,12 +448,11 @@ export function ProjectWorkspace({ project }: ProjectWorkspaceProps) {
                   setSuccess("PDF brief 已生成。");
                 })
               }
-              disabled={busyAction === "generate-brief"}
-              className="inline-flex items-center gap-2 rounded-md bg-[var(--accent)] px-4 py-2 text-white disabled:opacity-60"
+              loading={busyAction === "generate-brief"}
+              className="rounded-md px-4 py-2"
             >
-              {busyAction === "generate-brief" ? <LoaderCircle size={16} className="animate-spin" /> : null}
               生成 PDF brief
-            </button>
+            </Button>
           </div>
 
           <BriefPreview

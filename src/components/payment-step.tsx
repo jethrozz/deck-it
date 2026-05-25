@@ -418,7 +418,7 @@ export function PaymentStep({ project }: { project: PaymentProjectSnapshot }) {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="name@example.com"
-                disabled={paying || preparing}
+                disabled={quoting || paying || preparing}
               />
             </label>
             <label className="grid gap-2 text-sm">
@@ -428,7 +428,7 @@ export function PaymentStep({ project }: { project: PaymentProjectSnapshot }) {
                 value={phone}
                 onChange={(event) => setPhone(event.target.value)}
                 placeholder="13800000000"
-                disabled={paying || preparing}
+                disabled={quoting || paying || preparing}
               />
             </label>
           </div>
@@ -440,7 +440,7 @@ export function PaymentStep({ project }: { project: PaymentProjectSnapshot }) {
                 value={couponCode}
                 onChange={(event) => setCouponCode(event.target.value)}
                 placeholder="输入优惠码可刷新报价"
-                disabled={paying || preparing}
+                disabled={quoting || paying || preparing}
               />
             </label>
             <Button
